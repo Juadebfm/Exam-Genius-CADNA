@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useContext } from "react";
 import { AuthContext } from "../../context/AuthContextDefinition.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
+import { apiClient, API_ENDPOINTS } from "../../config/api.js";
 
 import ActiveDashboard from "./ActiveDashboard";
 import EmptyDashboard from "./EmptyDashboard";
@@ -22,33 +23,24 @@ const StudentDashboard = () => {
         setLoading(true);
         setError(null);
         
-        const token = localStorage.getItem('authToken');
+        // Use apiClient instead of fetch
+        const response = await apiClient.get(API_ENDPOINTS.ME);
         
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-        
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setDashboardData(data);
+        // Backend returns { success: true, data: {...} }
+        if (response.success && response.data) {
+          setDashboardData(response.data);
         } else {
-          throw new Error('Server error');
+          throw new Error('Invalid response format');
         }
       } catch (error) {
         console.error('Dashboard fetch error:', error);
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-          setError('Network error. Please check your internet connection.');
-        } else if (error.message.includes('No authentication token')) {
+        
+        if (error.message.includes('Not authorized') || error.message.includes('401')) {
           setError('Please sign in again.');
+        } else if (error.message.includes('Network error')) {
+          setError('Network error. Please check your internet connection.');
         } else {
-          setError('Failed to load dashboard data. Please try again.');
+          setError(error.message || 'Failed to load dashboard data. Please try again.');
         }
       } finally {
         setLoading(false);
@@ -62,12 +54,22 @@ const StudentDashboard = () => {
     }
   }, [user]);
   
-  const hasActivity = dashboardData?.hasActivity || false;
+  // Check if user has any activity 
+  const hasActivity = dashboardData?.id ? true : false;
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <Header onMenuToggle={() => setSidebarOpen(prev => !prev)} title="Dashboard" darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />
-      <Sidebar isOpen={sidebarOpen} userRole="student" onClose={() => setSidebarOpen(false)} />
+      <Header 
+        onMenuToggle={() => setSidebarOpen(prev => !prev)} 
+        title="Dashboard" 
+        darkMode={darkMode} 
+        onDarkModeToggle={toggleDarkMode} 
+      />
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        userRole="student" 
+        onClose={() => setSidebarOpen(false)} 
+      />
       
       <main className="lg:ml-64 p-4 sm:p-6">
         <div className="mb-6 sm:mb-8 mt-20">
@@ -77,15 +79,13 @@ const StudentDashboard = () => {
             </span>
             <div>
               <h1 className="text-xl xs:text-2xl sm:text-3xl font-Poppins font-bold text-gray-900 mb-1 leading-tight">
-                Hello {(user?.firstName || "Student").charAt(0).toUpperCase() + (user?.firstName || "Student").slice(1)},
+                Hello {(user?.firstName || dashboardData?.firstName || "Student").charAt(0).toUpperCase() + (user?.firstName || dashboardData?.firstName || "Student").slice(1)},
               </h1>
               <p className="text-sm text-gray-500 mb-4">
                 {hasActivity ? "Focus on your progress, ready for your next exam" : "Ready to start your journey?"}
               </p>
             </div>
           </div>
-          
-
         </div>
 
         {loading ? (
@@ -113,9 +113,9 @@ const StudentDashboard = () => {
               </div>
             )}
             {hasActivity ? (
-              <ActiveDashboard user={user} dashboardData={dashboardData} />
+              <ActiveDashboard user={user || dashboardData} dashboardData={dashboardData} />
             ) : (
-              <EmptyDashboard user={user} />
+              <EmptyDashboard user={user || dashboardData} />
             )}
           </>
         )}
