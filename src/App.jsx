@@ -28,111 +28,170 @@ import PublicRoute from "./components/PublicRoute.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import NotFound from "./pages/NotFound.jsx";
 
+
 function App() {
   return (
     <ThemeProvider>
       <ErrorBoundary>
-      <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/signin" element={
-        <PublicRoute>
-          <Signin />
-        </PublicRoute>
-      } />
-      <Route path="/2fa" element={
-        <PublicRoute>
-          <TwoFactorAuth />
-        </PublicRoute>
-      } />
-      <Route path="/register" element={
-        <PublicRoute>
-          <RoleSelector />
-        </PublicRoute>
-      } />
-      <Route path="/register/account" element={
-        <PublicRoute>
-          <AccountDetails />
-        </PublicRoute>
-      } />
-      <Route path="/register/personal" element={
-        <PublicRoute>
-          <PersonalInfo />
-        </PublicRoute>
-      } />
-      <Route path="/register/security" element={
-        <PublicRoute>
-          <SecurityAndFinalize />
-        </PublicRoute>
-      } />
-      <Route path="/registration/creating" element={
-        <PublicRoute>
-          <CreatingAccount />
-        </PublicRoute>
-      } />
-      <Route path="/registration/complete" element={
-        <PublicRoute>
-          <RegistrationComplete />
-        </PublicRoute>
-      } />
-      <Route path="/student" element={
-        <ProtectedRoute requiredRole="student">
-          <StudentDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="/student/exams" element={
-        <ProtectedRoute requiredRole="student">
-          <StudentExams />
-        </ProtectedRoute>
-      } />
-      <Route path="/student/settings" element={
-        <ProtectedRoute requiredRole="student">
-          <StudentSettings />
-        </ProtectedRoute>
-      } />
-      <Route path="/instructor" element={
-        <ProtectedRoute requiredRole="instructor">
-          <InstructorDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="/create-exam" element={
-        <ProtectedRoute requiredRole="instructor">
-          <CreateExamPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/admin" element={
-        <ProtectedRoute requiredRole="admin">
-          <AdminDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="/exam/:examId/overview" element={
-        <ProtectedRoute requiredRole="student">
-          <ExamOverview />
-        </ProtectedRoute>
-      } />
-      <Route path="/exam/:examId/webcam-check" element={
-        <ProtectedRoute requiredRole="student">
-          <WebcamCheck />
-        </ProtectedRoute>
-      } />
-      <Route path="/exam/:examId/taking" element={
-        <ProtectedRoute requiredRole="student">
-          <ExamTakingNew />
-        </ProtectedRoute>
-      } />
-      <Route path="/exam/:examId/summary" element={
-        <ProtectedRoute requiredRole="student">
-          <ExamReview />
-        </ProtectedRoute>
-      } />
-      <Route path="/exam/:examId/result" element={
-        <ProtectedRoute requiredRole="student">
-          <ExamResult />
-        </ProtectedRoute>
-      } />
-      <Route path="/exam/link/:examLink" element={<ExamEnrollment />} />
-      <Route path="/exam/:examLink" element={<ExamEnrollment />} />
-      <Route path="*" element={<NotFound />} />
-      </Routes>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route
+            path="/signin"
+            element={
+              <PublicRoute>
+                <Signin />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/2fa"
+            element={
+              <PublicRoute>
+                <TwoFactorAuth />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <PublicRoute>
+                <RoleSelector />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register/account"
+            element={
+              <PublicRoute>
+                <AccountDetails />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register/personal"
+            element={
+              <PublicRoute>
+                <PersonalInfo />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register/security"
+            element={
+              <PublicRoute>
+                <SecurityAndFinalize />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/registration/creating"
+            element={
+              <PublicRoute>
+                <CreatingAccount />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/registration/complete"
+            element={
+              <PublicRoute>
+                <RegistrationComplete />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/student"
+            element={
+              <ProtectedRoute requiredRole="student">
+                <StudentDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/exams"
+            element={
+              <ProtectedRoute requiredRole="student">
+                <StudentExams />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/settings"
+            element={
+              <ProtectedRoute requiredRole="student">
+                <StudentSettings />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/instructor"
+            element={
+              <ProtectedRoute requiredRole="instructor">
+                <InstructorDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/create-exam"
+            element={
+              <ProtectedRoute requiredRole="instructor">
+                <CreateExamPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/exam/:examId/overview"
+            element={
+              <ProtectedRoute requiredRole="student">
+                <ExamOverview />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/exam/:examId/webcam-check"
+            element={
+              <ProtectedRoute requiredRole="student">
+                <WebcamCheck />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/exam/:examId/taking"
+            element={
+              <ProtectedRoute requiredRole="student">
+                <ExamTakingNew />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/exam/:examId/summary"
+            element={
+              <ProtectedRoute requiredRole="student">
+                <ExamReview />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/exam/:examId/result"
+            element={
+              <ProtectedRoute requiredRole="student">
+                <ExamResult />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/exam/link/:examLink" element={<ExamEnrollment />} />
+          <Route path="/exam/:examLink" element={<ExamEnrollment />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </ErrorBoundary>
     </ThemeProvider>
   );

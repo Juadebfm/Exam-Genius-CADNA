@@ -1,67 +1,69 @@
 import { useNavigate } from "react-router-dom";
-import { IoTimeOutline, IoBookOutline } from "react-icons/io5";
 import { useTheme } from "../../context/ThemeContext.jsx";
 
 const ActiveExams = ({ user, exams }) => {
   const navigate = useNavigate();
   const { darkMode } = useTheme();
-  
+
   const startExam = (exam) => {
     const examId = exam.id || exam._id || exam.examId;
-    
+
     // Check if exam has been completed
     const resultData = localStorage.getItem(`exam_result_${examId}`);
-    if (resultData) {
-      return; // Exam already completed
-    }
-    
+    if (resultData) return;
+
     navigate(`/exam/${examId}/overview`);
   };
 
   return (
-    <>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {exams.map((exam, index) => (
-          <div key={exam.id || exam._id || index} className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-6 shadow-sm flex flex-col h-full`}>
-            <div className="flex-1">
-              <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-1`}>{exam.title || exam.name}</h3>
-              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-3`}>{exam.description || exam.subject}</p>
+    <div
+      className={`${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"} border rounded-lg`}
+    >
+      <div>
+        {exams.map((exam, index) => {
+          const examId = exam.id || exam._id || exam.examId;
+          const isCompleted = localStorage.getItem(`exam_result_${examId}`);
 
-              <div className="space-y-4">
-                <div className={`flex items-center justify-between text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  <div className="flex items-center">
-                    <IoTimeOutline className="mr-2" size={14} />
-                    <span>Due Date</span>
-                  </div>
-                  <div className="flex items-center">
-                    <IoTimeOutline className="mr-2" size={14} />
-                    <span>{exam.timeLimit || exam.duration}m</span>
-                  </div>
-                </div>
-                <div className={`flex items-center text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  <IoBookOutline className="mr-2" size={14} />
-                  <span>{exam.questionCount || exam.questions?.length || 0} Questions</span>
-                </div>
-              </div>
-            </div>
-            
-            <button 
-              onClick={() => startExam(exam)}
-              disabled={localStorage.getItem(`exam_result_${exam.id || exam._id || exam.examId}`)}
-              className={`w-full py-3 px-4 rounded-lg text-sm font-medium transition-colors mt-6 ${
-                localStorage.getItem(`exam_result_${exam.id || exam._id || exam.examId}`)
-                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                  : 'bg-blue-500 text-white hover:bg-blue-600'
+          return (
+            <div
+              key={examId || index}
+              className={`p-6 flex items-start justify-between ${
+                darkMode ? "hover:bg-gray-750" : "hover:bg-gray-50"
+              } transition-colors mb-5 last:mb-0 border rounded-lg ${
+                darkMode ? "border-gray-700" : "border-gray-200"
               }`}
             >
-              {localStorage.getItem(`exam_result_${exam.id || exam._id || exam.examId}`) ? 'Completed' : 'Start Exam'}
-            </button>
-          </div>
-        ))}
-      </div>
-      
+              <div className="flex-1 pr-6 ">
+                <h3
+                  className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"} mb-2`}
+                >
+                  {exam.title || exam.name}
+                </h3>
+                <p
+                  className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mb-4 leading-relaxed max-w-[404px]`}
+                >
+                  {exam.description || exam.subject}
+                </p>
 
-    </>
+                <button
+                  onClick={() => startExam(exam)}
+                  disabled={isCompleted}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isCompleted
+                      ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                      : darkMode
+                        ? "bg-gray-700 text-white hover:bg-gray-600"
+                        : "bg-gray-900 text-white hover:bg-gray-800"
+                  }`}
+                >
+                  {isCompleted ? "Completed" : "Start Exam"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 };
 
