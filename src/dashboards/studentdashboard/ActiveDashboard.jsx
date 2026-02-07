@@ -28,7 +28,7 @@ const ActiveDashboard = () => {
         
         // Filter upcoming exams (show all enrolled exams)
         // Students only see exams they're enrolled in (backend already filters)
-        const upcoming = examsData.slice(0, 2); // Show first 2 exams
+        const upcoming = examsData.slice(0, 2); 
         
         setUpcomingExams(upcoming);
         
@@ -105,10 +105,10 @@ const ActiveDashboard = () => {
         subject: data.subject,
         percentage: Math.round(data.total / data.count),
         examsCompleted: data.count,
-        totalExams: data.count + 1, // Assuming 1 more exam available
+        totalExams: data.count + 1, 
         color: colors[index % colors.length]
       }))
-      .slice(0, 3); // Show top 3 subjects
+      .slice(0, 3); 
   };
 
   const handleTakeExam = (examId) => {
@@ -172,7 +172,7 @@ const ActiveDashboard = () => {
         </p>
       </div>
 
-      {/* Quick Actions */}
+      
       <div className="mb-8">
         <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-4`}>
           Quick Actions

@@ -12,8 +12,8 @@ const StudentDashboard = () => {
   const { darkMode, toggleDarkMode } = useTheme();
 
   // Determine if student has activity (enrolled in exams or has results)
-  // This will be determined by the ActiveDashboard component itself through API calls
-  // For now, we'll show ActiveDashboard by default
+  
+  
   const hasActivity = true;
 
   return (

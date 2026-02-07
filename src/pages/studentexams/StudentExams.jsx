@@ -92,7 +92,7 @@ const StudentExams = () => {
       />
       
       <main className="lg:ml-64 pt-20 px-4 sm:px-6 lg:px-8 py-6">
-        {/* Page Title */}
+       
         <div className="mb-6">
           <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             Exams
@@ -120,7 +120,7 @@ const StudentExams = () => {
           </div>
         </div>
 
-        {/* Available Exams Heading */}
+       
         <div className="mb-4">
           <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             Available Exams
