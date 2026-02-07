@@ -8,7 +8,7 @@ const WebcamCheck = () => {
   const navigate = useNavigate();
   const { examId } = useParams();
   const videoRef = useRef(null);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [cameraEnabled, setCameraEnabled] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { darkMode, toggleDarkMode } = useTheme();
@@ -69,13 +69,13 @@ const WebcamCheck = () => {
             <div className="text-center mb-6">
               <FiShield className={`w-16 h-16 mx-auto mb-4 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} strokeWidth={1} />
               <h1 className={`text-3xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-4 text-center`}>Webcam Check</h1>
-              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-6 text-center`}>
-                Please allow access to your webcam and microphone. We need to verify your video feed before the exam.
+              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-500'} mb-6 text-center`}>
+                Please enable your webcam and follow the instructions below to proceed with your exam.
               </p>
               
-              <div className={`flex items-center space-x-2 mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                <FiCamera className="w-5 h-5" />
-                <span className="text-sm font-medium">Webcam Verification</span>
+              <div className="flex items-center space-x-2 mb-6 ">
+                <FiCamera className={`h-5 w-4 mx-3 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}/>
+                <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-800'}  `}>Webcam Verification</span>
               </div>
             </div>
 
@@ -105,7 +105,7 @@ const WebcamCheck = () => {
             </div>
 
             <div className="mb-8">
-              <h2 className={`text-xl font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'} mb-4 text-center`}>Webcam Instructions</h2>
+              <h2 className={`text-xl font-bold ${darkMode ? 'text-gray-200' : 'text-gray-800'} mb-4`}>Instructions</h2>
               <ul className={`list-disc pl-6 space-y-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 <li>Ensure your webcam is properly connected and working.</li>
                 <li>Position yourself clearly in front of the camera.</li>
@@ -119,6 +119,17 @@ const WebcamCheck = () => {
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
             )}
+
+            <div className='mt-20'>
+              <p className="flex mb-4  mb-6">
+                <FiCamera className={`h-5 mx-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-800'}  mb-6`}>Webcam Access</span>
+              </p>
+              <p className="flex mb-4  mb-6">
+                <FiShield className={`h-5 mx-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-800'}  mb-6`}>Face Detection</span>
+              </p>
+            </div>
 
             <div className="px-16">
               <button
