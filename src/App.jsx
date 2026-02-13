@@ -27,7 +27,7 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import PublicRoute from "./components/PublicRoute.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import NotFound from "./pages/NotFound.jsx";
-
+import StudentResults from "./pages/studentresults/StudentResults.jsx";
 
 function App() {
   return (
@@ -116,6 +116,14 @@ function App() {
             }
           />
           <Route
+            path="/student/results"
+            element={
+              <ProtectedRoute requiredRole="student">
+                <StudentResults />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/student/settings"
             element={
               <ProtectedRoute requiredRole="student">
@@ -123,7 +131,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/instructor"
             element={

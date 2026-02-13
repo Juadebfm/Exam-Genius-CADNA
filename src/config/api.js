@@ -18,10 +18,11 @@ export const API_ENDPOINTS = {
   ENROLLED_EXAMS: '/api/user/enrolled-exams',
   EXAM_BY_LINK: (examLink) => `/api/exams/link/${examLink}`,
   EXAM_DETAILS: (examId) => `/api/exams/${examId}`,
-  START_EXAM: (examId) => `/api/exams/${examId}/start`,
+  EXAM_WITH_ANSWERS: (examId) => `/api/exams/${examId}/with-answers`, // NEW ENDPOINT
   
   // Exam session endpoints
   EXAM_SESSION: (sessionId) => `/api/exam-sessions/${sessionId}`,
+  START_EXAM: (examId) => `/api/exam-sessions/start/${examId}`,
   SUBMIT_ANSWER: (sessionId) => `/api/exam-sessions/${sessionId}/answer`,
   SUBMIT_EXAM: (sessionId) => `/api/exam-sessions/${sessionId}/submit`,
   AUTO_SUBMIT_EXAM: (sessionId) => `/api/exam-sessions/${sessionId}/auto-submit`,

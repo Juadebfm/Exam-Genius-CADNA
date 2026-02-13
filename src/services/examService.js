@@ -91,7 +91,7 @@ export const examService = {
 
   async syncAnswers(sessionId, answers) {
     try {
-      const response = await apiClient.post(`/api/exam-sessions/${sessionId}/sync`, { answers });
+      const response = await apiClient.post(`/api/exam-sessions/${examId}/sync`, { answers });
       return { success: true, data: response };
     } catch (error) {
       return { success: false, error: error.message };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiChevronLeft, FiChevronRight, FiFlag } from 'react-icons/fi';
 import { MdOutlineVideocam } from 'react-icons/md';
@@ -17,7 +17,26 @@ const ExamTaking = () => {
   const [sessionId, setSessionId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [savingStatus, setSavingStatus] = useState(''); // 'saving', 'saved', ''
   const { darkMode, toggleDarkMode } = useTheme();
+
+  // Use refs to access latest values in timer callback
+  const sessionIdRef = useRef(sessionId);
+  const answersRef = useRef(answers);
+  const examIdRef = useRef(examId);
+
+  // Update refs when values change
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
+
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
+  useEffect(() => {
+    examIdRef.current = examId;
+  }, [examId]);
 
   // Session recovery function
   const recoverSession = async () => {
@@ -50,7 +69,7 @@ const ExamTaking = () => {
           const sessionResult = await examService.getExamSession(newSessionId);
           if (sessionResult.success) {
             setExam(sessionResult.data.exam || sessionResult.data);
-            const examDuration = (sessionResult.data.exam?.timeLimit || sessionResult.data.exam?.duration || 60) * 60;
+            const examDuration = (sessionResult.data.exam?.settings?.timeLimit || sessionResult.data.exam?.timeLimit || sessionResult.data.exam?.duration || 7) * 60;
             
             // Handle timer logic
             const examStartKey = `exam_start_${examId}`;
@@ -87,22 +106,70 @@ const ExamTaking = () => {
     }
   }, [examId]);
 
-  // Timer countdown effect
+  // Timer countdown effect with auto-submit
   useEffect(() => {
+    if (timeLeft <= 0) return;
+
     const timer = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 1) {
-          handleSubmitExam();
+        const newTime = prev - 1;
+        
+        if (newTime <= 0) {
+          // Time expired - auto-submit
+          clearInterval(timer);
+          handleAutoSubmit();
           return 0;
         }
-        return prev - 1;
+        
+        return newTime;
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [examId]);
+  }, []); // Empty array - only run once on mount
 
-  // Auto-sync timer
+  const handleAutoSubmit = async () => {
+    console.log('⏰ TIME EXPIRED - Auto-submitting exam...');
+    console.log('Session ID:', sessionIdRef.current);
+    console.log('Answers count:', Object.keys(answersRef.current).length);
+    
+    if (!sessionIdRef.current) {
+      console.error('❌ No session ID for auto-submit');
+      
+      return;
+    }
+    
+    try {
+      const result = await examService.submitExam(
+        sessionIdRef.current, 
+        answersRef.current, 
+        true // isAutoSubmit
+      );
+      console.log('✅ Auto-submit result:', result);
+      
+      if (result.success) {
+        // Clear exam data
+        const examIdValue = examIdRef.current;
+        localStorage.removeItem(`exam_start_${examIdValue}`);
+        localStorage.removeItem(`exam_answers_${examIdValue}`);
+        localStorage.removeItem(`exam_flagged_${examIdValue}`);
+        localStorage.removeItem(`exam_session_${examIdValue}`);
+        
+        
+        navigate(`/exam/${examIdValue}/result`);
+      } else {
+        console.error('❌ Auto-submit failed:', result.error);
+        setError('Time expired. Exam auto-submitted but there was an error.');
+        
+      }
+    } catch (error) {
+      console.error('❌ Auto-submit error:', error);
+      setError('Time expired. Please submit your exam manually.');
+     
+    }
+  };
+
+  // Auto-sync timer - Save answers every 30 seconds
   useEffect(() => {
     const interval = setInterval(async () => {
       if (sessionId && Object.keys(answers).length > 0) {
@@ -113,11 +180,12 @@ const ExamTaking = () => {
             timeSpent: 0
           }));
           await examService.syncAnswers(sessionId, answersArray);
+          console.log('✅ Auto-saved answers:', answersArray.length);
         } catch (error) {
-          console.warn('Bulk sync failed');
+          console.warn('❌ Auto-save failed, will retry');
         }
       }
-    }, 30000);
+    }, 30000); // Every 30 seconds
     
     return () => clearInterval(interval);
   }, [sessionId, answers]);
@@ -129,23 +197,56 @@ const ExamTaking = () => {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Determine timer color based on time left
+  const getTimerColor = () => {
+    const totalDuration = (exam?.settings?.timeLimit || exam?.timeLimit || 60) * 60; // in seconds
+    const percentageLeft = (timeLeft / totalDuration) * 100;
+    
+    if (percentageLeft <= 10) {
+      return 'text-red-600 animate-pulse'; // Last 10% - Red and pulsing
+    } else if (percentageLeft <= 25) {
+      return 'text-orange-500'; // Last 25% - Orange warning
+    }
+    return darkMode ? 'text-white' : 'text-gray-900'; // Normal
+  };
+
   const saveAnswer = async (questionId, answer, timeSpent = 0) => {
-    // Save locally first
+    // Save locally first (instant)
     const newAnswers = { ...answers, [questionId]: answer };
     setAnswers(newAnswers);
     localStorage.setItem(`exam_answers_${examId}`, JSON.stringify(newAnswers));
     
-    // Sync to backend
+    setSavingStatus('saving');
+    console.log(`💾 Saving answer for question ${questionId}:`, answer);
+    
+    // Sync to backend immediately (background)
     if (sessionId) {
       try {
         await examService.submitAnswer(sessionId, questionId, answer, timeSpent);
+        console.log(`✅ Answer synced to server for question ${questionId}`);
+        setSavingStatus('saved');
+        setTimeout(() => setSavingStatus(''), 2000); // Clear after 2 seconds
       } catch (error) {
-        console.warn('Answer sync failed, will retry');
+        console.warn(`❌ Answer sync failed for question ${questionId}, saved locally. Will retry in 30s.`);
+        setSavingStatus('error');
+        setTimeout(() => setSavingStatus(''), 3000);
       }
+    } else {
+      console.warn('⚠️ No session ID yet, answer saved locally only');
+      setSavingStatus('local');
+      setTimeout(() => setSavingStatus(''), 2000);
     }
   };
 
   const handleAnswerSelect = (questionId, answer) => {
+    // Check if answer actually changed
+    const previousAnswer = answers[questionId];
+    if (previousAnswer === answer) {
+      console.log('ℹ️ Same answer selected, skipping save');
+      return;
+    }
+    
+    console.log(`🔄 Answer changed from "${previousAnswer}" to "${answer}"`);
     saveAnswer(questionId, answer);
   };
 
@@ -259,17 +360,7 @@ const ExamTaking = () => {
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
-      {/* Debug Info */}
-      <div className="fixed top-4 right-4 bg-white p-2 rounded shadow text-xs max-w-xs z-50">
-        <div>Exam: {exam ? 'Loaded' : 'Not loaded'}</div>
-        <div>Questions: {questions.length}</div>
-        <div>Current Q: {currentQuestion}</div>
-        <div>Has currentQ: {currentQ ? 'Yes' : 'No'}</div>
-        <div>Q Text: {currentQ?.text || currentQ?.question || currentQ?.questionText || 'No text'}</div>
-        <div>Q Type: {currentQ?.type || 'No type'}</div>
-        <div>Q ID: {currentQ?.id || currentQ?._id || 'No ID'}</div>
-        <div>Q Keys: {currentQ ? Object.keys(currentQ).join(', ') : 'None'}</div>
-      </div>
+     
       <ExamHeader darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />
 
       {/* Exam Header Section */}
@@ -291,10 +382,53 @@ const ExamTaking = () => {
               <MdOutlineVideocam className={`w-6 h-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
               <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
             </div>
+            {/* Auto-Save Indicator */}
+            {savingStatus && (
+              <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm ${
+                savingStatus === 'saved' ? 'bg-green-100 text-green-700' :
+                savingStatus === 'saving' ? 'bg-blue-100 text-blue-700' :
+                savingStatus === 'error' ? 'bg-red-100 text-red-700' :
+                'bg-gray-100 text-gray-700'
+              }`}>
+                {savingStatus === 'saved' && (
+                  <>
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span>Saved</span>
+                  </>
+                )}
+                {savingStatus === 'saving' && (
+                  <>
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Saving...</span>
+                  </>
+                )}
+                {savingStatus === 'error' && (
+                  <>
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <span>Saved locally</span>
+                  </>
+                )}
+                {savingStatus === 'local' && (
+                  <>
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z" />
+                    </svg>
+                    <span>Local save</span>
+                  </>
+                )}
+              </div>
+            )}
             {/* Timer */}
-            <div className={`flex items-center space-x-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} px-6 py-3 rounded-lg`}>
+            <div className={`flex items-center space-x-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} px-6 py-3 rounded-lg ${timeLeft <= ((exam?.settings?.timeLimit || 60) * 60 * 0.1) ? 'ring-2 ring-red-500' : ''}`}>
               <div className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-lg`}>🕐</div>
-              <div className={`text-xl font-mono ${darkMode ? 'text-white' : 'text-gray-900'} font-semibold`}>
+              <div className={`text-xl font-mono font-semibold ${getTimerColor()}`}>
                 {formatTime(timeLeft)}
               </div>
             </div>
@@ -303,6 +437,19 @@ const ExamTaking = () => {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-6">
+        {/* Time Warning Banner */}
+        {timeLeft <= ((exam?.settings?.timeLimit || 60) * 60 * 0.1) && timeLeft > 0 && (
+          <div className="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg flex items-center space-x-3 animate-pulse">
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="font-semibold">Time Running Out!</p>
+              <p className="text-sm">You have less than {Math.ceil(timeLeft / 60)} minute{Math.ceil(timeLeft / 60) === 1 ? '' : 's'} remaining. Please complete your exam.</p>
+            </div>
+          </div>
+        )}
+
         {/* Question Navigation Section */}
         <div className="flex items-center justify-start mb-6">
           <button

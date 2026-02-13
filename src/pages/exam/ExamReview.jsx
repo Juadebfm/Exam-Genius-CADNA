@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MdOutlineVideocam } from 'react-icons/md';
 import { FiMoon, FiSun } from 'react-icons/fi';
@@ -18,13 +18,26 @@ const ExamReview = () => {
   const [error, setError] = useState('');
   const { darkMode, toggleDarkMode } = useTheme();
 
+  // Use refs to access latest values in timer callback
+  const answersRef = useRef(answers);
+  const examIdRef = useRef(examId);
+
+  // Update refs when values change
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
+  useEffect(() => {
+    examIdRef.current = examId;
+  }, [examId]);
+
   useEffect(() => {
     const loadExamData = async () => {
       try {
         const result = await examService.getExamDetails(examId);
         if (result.success) {
           setExam(result.data);
-          const examDuration = (result.data.timeLimit || result.data.duration || 60) * 60;
+          const examDuration = (result.data.settings?.timeLimit || result.data.timeLimit || result.data.duration || 7) * 60;
           
           // Calculate remaining time based on saved start time
           const examStartKey = `exam_start_${examId}`;
@@ -60,26 +73,63 @@ const ExamReview = () => {
     }
   }, [examId]);
 
-  // Timer countdown effect
+  // Timer countdown effect with auto-submit
   useEffect(() => {
+    if (timeLeft <= 0) return;
+
     const timer = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 1) {
-          // Auto-submit when time runs out
-          const sessionId = localStorage.getItem(`exam_session_${examId}`);
-          if (sessionId) {
-            examService.submitExam(sessionId, answers, true).then(() => {
-              navigate(`/exam/${examId}/result`);
-            });
-          }
+        const newTime = prev - 1;
+        
+        if (newTime <= 0) {
+          // Time expired - auto-submit
+          clearInterval(timer);
+          handleAutoSubmit();
           return 0;
         }
-        return prev - 1;
+        
+        return newTime;
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [examId]);
+  }, []); // Empty array - only run once
+
+  const handleAutoSubmit = async () => {
+    console.log('⏰ TIME EXPIRED - Auto-submitting exam from review page...');
+    
+    const sessionId = localStorage.getItem(`exam_session_${examIdRef.current}`);
+    console.log('Session ID:', sessionId);
+    console.log('Answers count:', Object.keys(answersRef.current).length);
+    
+    if (sessionId) {
+      try {
+        const result = await examService.submitExam(
+          sessionId, 
+          answersRef.current, 
+          true // isAutoSubmit
+        );
+        console.log('✅ Auto-submit result:', result);
+        
+        if (result.success) {
+          const examIdValue = examIdRef.current;
+          localStorage.removeItem(`exam_start_${examIdValue}`);
+          localStorage.removeItem(`exam_answers_${examIdValue}`);
+          localStorage.removeItem(`exam_flagged_${examIdValue}`);
+          localStorage.removeItem(`exam_session_${examIdValue}`);
+          
+          
+          navigate(`/exam/${examIdValue}/result`);
+        }
+      } catch (error) {
+        console.error('❌ Auto-submit failed:', error);
+       
+      }
+    } else {
+      console.error('❌ No session ID for auto-submit');
+      
+    }
+  };
 
   if (loading) {
     return (
@@ -150,6 +200,19 @@ const ExamReview = () => {
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Determine timer color based on time left
+  const getTimerColor = () => {
+    const totalDuration = (exam?.settings?.timeLimit || exam?.timeLimit || 60) * 60;
+    const percentageLeft = (timeLeft / totalDuration) * 100;
+    
+    if (percentageLeft <= 10) {
+      return 'text-red-600 animate-pulse';
+    } else if (percentageLeft <= 25) {
+      return 'text-orange-500';
+    }
+    return darkMode ? 'text-white' : 'text-gray-900';
   };
 
   const handleReviewQuestion = (questionNumber) => {
@@ -252,9 +315,9 @@ const ExamReview = () => {
               <MdOutlineVideocam className={`w-6 h-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
               <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
             </div>
-            <div className={`flex items-center space-x-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} px-6 py-3 rounded-lg`}>
+            <div className={`flex items-center space-x-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} px-6 py-3 rounded-lg ${timeLeft <= ((exam?.settings?.timeLimit || 60) * 60 * 0.1) ? 'ring-2 ring-red-500' : ''}`}>
               <div className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-lg`}>🕐</div>
-              <div className={`text-xl font-mono ${darkMode ? 'text-white' : 'text-gray-900'} font-semibold`}>
+              <div className={`text-xl font-mono font-semibold ${getTimerColor()}`}>
                 {formatTime(timeLeft)}
               </div>
             </div>
@@ -263,6 +326,19 @@ const ExamReview = () => {
       </div>
 
       <div className="container mx-auto px-4 py-6 max-w-6xl">
+        {/* Time Warning Banner */}
+        {timeLeft <= ((exam?.settings?.timeLimit || 60) * 60 * 0.1) && timeLeft > 0 && (
+          <div className="mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg flex items-center space-x-3 animate-pulse">
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="font-semibold">Time Running Out!</p>
+              <p className="text-sm">You have less than {Math.ceil(timeLeft / 60)} minute{Math.ceil(timeLeft / 60) === 1 ? '' : 's'} remaining. Please submit your exam now.</p>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <h2 className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-800'} mb-2`}>Exam Summary</h2>
         <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-6`}>Review your answers before submitting</p>

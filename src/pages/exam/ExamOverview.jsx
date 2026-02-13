@@ -78,7 +78,7 @@ const ExamOverview = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
               <div className={`${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border p-6 rounded-lg text-center`}>
                 <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>Duration</div>
-                <div className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{examData?.duration || examData?.timeLimit || 60} minutes</div>
+                <div className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{examData?.settings?.timeLimit || examData?.duration || examData?.timeLimit } minutes </div>
               </div>
               <div className={`${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border p-6 rounded-lg text-center`}>
                 <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>Questions</div>
