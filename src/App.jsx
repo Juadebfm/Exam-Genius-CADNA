@@ -21,7 +21,7 @@ import WebcamCheck from "./pages/exam/WebcamCheck.jsx";
 import ExamTakingNew from "./pages/exam/ExamTaking.jsx";
 import ExamReview from "./pages/exam/ExamReview.jsx";
 import ExamResult from "./pages/exam/ExamResult.jsx";
-import StudentExams from "./pages/student/StudentExams.jsx";
+import StudentExams from "./pages/studentexams/StudentExams.jsx";
 import StudentSettings from "./pages/StudentSettings.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import PublicRoute from "./components/PublicRoute.jsx";
