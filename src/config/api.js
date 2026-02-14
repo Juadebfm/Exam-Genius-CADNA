@@ -20,6 +20,8 @@ export const API_ENDPOINTS = {
   PROFILE: '/api/user/profile',
   UPDATE_PROFILE: '/api/user/profile',
   
+
+  
   // Exam endpoints
   EXAMS: '/api/exams',
   ENROLLED_EXAMS: '/api/user/enrolled-exams',
