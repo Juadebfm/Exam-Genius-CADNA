@@ -1,12 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000' ;
 
-
-
-console.log('🔍 Environment check:');
-console.log('VITE_API_URL from env:', import.meta.env.VITE_API_URL);
-console.log('Final API_BASE_URL:', API_BASE_URL);
-console.log('All env vars:', import.meta.env);
-
 export const API_ENDPOINTS = {
   // Auth endpoints
   LOGIN: '/api/auth/login',
@@ -19,8 +12,6 @@ export const API_ENDPOINTS = {
   ME: '/api/auth/me',
   PROFILE: '/api/user/profile',
   UPDATE_PROFILE: '/api/user/profile',
-  
-
   
   // Exam endpoints
   EXAMS: '/api/exams',

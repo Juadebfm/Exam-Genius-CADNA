@@ -56,7 +56,9 @@ const ExamAccessPage = () => {
           <p><strong>Questions:</strong> {exam.questions?.length || 0}</p>
         </div>
 
+
         <button
+        
           onClick={startExam}
           className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 font-medium"
         >
