@@ -5,6 +5,8 @@ import { MdOutlineVideocam } from 'react-icons/md';
 import { useTheme } from '../../context/ThemeContext.jsx';
 import ExamHeader from '../../components/Layout/ExamHeader.jsx';
 import { examService } from '../../services/examService.js';
+import { useExamMonitoring } from '../../hooks/useExamMonitoring.js';
+import { examMonitoringService } from '../../services/examMonitoringService.js';
 
 const ExamTaking = () => {
   const { examId } = useParams();
@@ -38,6 +40,19 @@ const ExamTaking = () => {
     examIdRef.current = examId;
   }, [examId]);
 
+  // Anti-cheating monitoring
+  const { isFullscreen, violations, totalViolations } = useExamMonitoring({
+    sessionId,
+    examId,
+    enabled: true, // Enable monitoring
+    onIntegrityEvent: async (event) => {
+      // Log to backend
+      if (sessionId) {
+        await examMonitoringService.logIntegrityEvent(sessionId, event);
+      }
+    }
+  });
+
   // Session recovery function
   const recoverSession = async () => {
     try {
@@ -69,7 +84,7 @@ const ExamTaking = () => {
           const sessionResult = await examService.getExamSession(newSessionId);
           if (sessionResult.success) {
             setExam(sessionResult.data.exam || sessionResult.data);
-            const examDuration = (sessionResult.data.exam?.settings?.timeLimit || sessionResult.data.exam?.timeLimit || sessionResult.data.exam?.duration || 7) * 60;
+            const examDuration = (sessionResult.data.exam?.settings?.timeLimit || sessionResult.data.exam?.timeLimit || sessionResult.data.exam?.duration || 60) * 60;
             
             // Handle timer logic
             const examStartKey = `exam_start_${examId}`;
@@ -135,7 +150,7 @@ const ExamTaking = () => {
     
     if (!sessionIdRef.current) {
       console.error('❌ No session ID for auto-submit');
-      
+      alert('Time expired! No active session found. Please contact support.');
       return;
     }
     
@@ -155,17 +170,17 @@ const ExamTaking = () => {
         localStorage.removeItem(`exam_flagged_${examIdValue}`);
         localStorage.removeItem(`exam_session_${examIdValue}`);
         
-        
+        alert('Time expired! Your exam has been automatically submitted.');
         navigate(`/exam/${examIdValue}/result`);
       } else {
         console.error('❌ Auto-submit failed:', result.error);
         setError('Time expired. Exam auto-submitted but there was an error.');
-        
+        alert('Time expired! Submission failed. Please try manual submit.');
       }
     } catch (error) {
       console.error('❌ Auto-submit error:', error);
       setError('Time expired. Please submit your exam manually.');
-     
+      alert('Time expired! Please click Submit manually.');
     }
   };
 
@@ -382,6 +397,28 @@ const ExamTaking = () => {
               <MdOutlineVideocam className={`w-6 h-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
               <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
             </div>
+            {/* Violation Counter */}
+            {totalViolations > 0 && (
+              <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
+                totalViolations >= 5 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">{totalViolations} violation{totalViolations !== 1 ? 's' : ''}</span>
+              </div>
+            )}
+
+            {/* Fullscreen Status */}
+            {!isFullscreen && (
+              <div className="bg-orange-100 text-orange-700 px-4 py-2 rounded-lg flex items-center space-x-2">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">Not in fullscreen</span>
+              </div>
+            )}
+
             {/* Auto-Save Indicator */}
             {savingStatus && (
               <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm ${
