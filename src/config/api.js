@@ -1,4 +1,5 @@
-const API_BASE_URL = "https://cadna-backend-kpgj.onrender.com";
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "https://cadna-backend-kpgj.onrender.com";
 
 export const API_ENDPOINTS = {
   // Auth endpoints

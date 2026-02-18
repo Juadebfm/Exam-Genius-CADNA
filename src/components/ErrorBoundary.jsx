@@ -29,7 +29,7 @@ class ErrorBoundary extends Component {
     console.error('Error caught by boundary:', errorDetails);
     
     // Log to external service in production
-    if (process.env.NODE_ENV === 'production') {
+    if (import.meta.env.PROD) {
       // Replace with actual error reporting service
       console.error('Production error:', JSON.stringify(errorDetails));
     }
