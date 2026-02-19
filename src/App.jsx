@@ -13,7 +13,6 @@ import StudentDashboard from "./dashboards/studentdashboard/StudentDashboard.jsx
 import InstructorDashboard from "./dashboards/instructor-dashboards/Dashboard.jsx";
 import CreateExamPage from "./dashboards/instructor-dashboards/CreateExamPage.jsx";
 import AdminDashboard from "./dashboards/admindashboard/AdminDashboard.jsx";
-// import ExamTaking from "./pages/ExamTaking.jsx";
 import ExamAccessPage from "./pages/ExamAccessPage.jsx";
 import ExamEnrollment from "./pages/ExamEnrollment.jsx";
 import ExamOverview from "./pages/exam/ExamOverview.jsx";

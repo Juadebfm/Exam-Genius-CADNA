@@ -96,7 +96,7 @@ const ExamReview = () => {
   }, []); // Empty array - only run once
 
   const handleAutoSubmit = async () => {
-    console.log('⏰ TIME EXPIRED - Auto-submitting exam from review page...');
+    console.log(' TIME EXPIRED - Auto-submitting exam from review page...');
     
     const sessionId = localStorage.getItem(`exam_session_${examIdRef.current}`);
     console.log('Session ID:', sessionId);
@@ -109,7 +109,7 @@ const ExamReview = () => {
           answersRef.current, 
           true // isAutoSubmit
         );
-        console.log('✅ Auto-submit result:', result);
+        console.log(' Auto-submit result:', result);
         
         if (result.success) {
           const examIdValue = examIdRef.current;
@@ -122,11 +122,11 @@ const ExamReview = () => {
           navigate(`/exam/${examIdValue}/result`);
         }
       } catch (error) {
-        console.error('❌ Auto-submit failed:', error);
+        console.error(' Auto-submit failed:', error);
        
       }
     } else {
-      console.error('❌ No session ID for auto-submit');
+      console.error(' No session ID for auto-submit');
       
     }
   };
