@@ -4,6 +4,8 @@ import { MdOutlineVideocam } from 'react-icons/md';
 import { FiMoon, FiSun } from 'react-icons/fi';
 import { useTheme } from '../../context/ThemeContext.jsx';
 import { examService } from '../../services/examService.js';
+import { useExamMonitoring } from '../../hooks/useExamMonitoring.js';
+import { examMonitoringService } from '../../services/examMonitoringService.js';
 import LogoLink from '../../components/LogoLink.jsx';
 
 const ExamReview = () => {
@@ -16,11 +18,26 @@ const ExamReview = () => {
   const [flagged, setFlagged] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [sessionId, setSessionId] = useState(null); 
   const { darkMode, toggleDarkMode } = useTheme();
 
   // Use refs to access latest values in timer callback
   const answersRef = useRef(answers);
   const examIdRef = useRef(examId);
+  const sessionIdRef = useRef(null);
+
+  //  Anti-cheating monitoring 
+  const { isFullscreen, violations, totalViolations } = useExamMonitoring({
+    sessionId, 
+    examId,
+    enabled: true,
+    onIntegrityEvent: async (event) => {
+      if (sessionIdRef.current) { // 
+        await examMonitoringService.logIntegrityEvent(sessionIdRef.current, event);
+        console.log('🚨 Review page violation logged:', event.eventType);
+      }
+    }
+  });
 
   // Update refs when values change
   useEffect(() => {
@@ -30,6 +47,65 @@ const ExamReview = () => {
   useEffect(() => {
     examIdRef.current = examId;
   }, [examId]);
+
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
+  
+  useEffect(() => {
+    // Check if already in fullscreen (coming from exam taking page)
+    const isAlreadyFullscreen = !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.msFullscreenElement
+    );
+
+    // Only try to enter if not already in fullscreen
+    if (!isAlreadyFullscreen) {
+      const enterFullscreen = () => {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+          elem.requestFullscreen().catch(err => 
+            console.warn('Failed to enter fullscreen:', err)
+          );
+        } else if (elem.webkitRequestFullscreen) {
+          elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+          elem.msRequestFullscreen();
+        }
+      };
+
+      // Small delay to avoid conflict with navigation
+      setTimeout(enterFullscreen, 300);
+    }
+
+    // Monitor fullscreen changes and re-enter if user exits (not navigation)
+    const handleFullscreenChange = () => {
+      const isFullscreen = !!(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.msFullscreenElement
+      );
+
+      // Only re-enter if we're still on this page (component is mounted)
+      if (!isFullscreen) {
+        console.warn('⚠️ User exited fullscreen on review page');
+        // Don't auto re-enter - let user control it
+        // The monitoring hook will track the violation
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
   useEffect(() => {
     const loadExamData = async () => {
@@ -58,6 +134,13 @@ const ExamReview = () => {
           
           if (savedAnswers) setAnswers(JSON.parse(savedAnswers));
           if (savedFlagged) setFlagged(JSON.parse(savedFlagged));
+          
+          // Get session ID for monitoring
+          const storedSessionId = localStorage.getItem(`exam_session_${examId}`);
+          if (storedSessionId) {
+            setSessionId(storedSessionId); 
+            sessionIdRef.current = storedSessionId; 
+          }
         } else {
           setError(result.error || 'Failed to load exam');
         }
@@ -96,7 +179,7 @@ const ExamReview = () => {
   }, []); // Empty array - only run once
 
   const handleAutoSubmit = async () => {
-    console.log('⏰ TIME EXPIRED - Auto-submitting exam from review page...');
+    console.log(' TIME EXPIRED - Auto-submitting exam from review page...');
     
     const sessionId = localStorage.getItem(`exam_session_${examIdRef.current}`);
     console.log('Session ID:', sessionId);
@@ -109,7 +192,7 @@ const ExamReview = () => {
           answersRef.current, 
           true // isAutoSubmit
         );
-        console.log('✅ Auto-submit result:', result);
+        console.log(' Auto-submit result:', result);
         
         if (result.success) {
           const examIdValue = examIdRef.current;
@@ -118,15 +201,23 @@ const ExamReview = () => {
           localStorage.removeItem(`exam_flagged_${examIdValue}`);
           localStorage.removeItem(`exam_session_${examIdValue}`);
           
+          // Exit fullscreen on auto-submit
+          if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+          } else if (document.webkitFullscreenElement) {
+            document.webkitExitFullscreen();
+          } else if (document.msFullscreenElement) {
+            document.msExitFullscreen();
+          }
           
           navigate(`/exam/${examIdValue}/result`);
         }
       } catch (error) {
-        console.error('❌ Auto-submit failed:', error);
+        console.error(' Auto-submit failed:', error);
        
       }
     } else {
-      console.error('❌ No session ID for auto-submit');
+      console.error(' No session ID for auto-submit');
       
     }
   };
@@ -276,6 +367,15 @@ const ExamReview = () => {
         localStorage.removeItem(`exam_flagged_${examId}`);
         localStorage.removeItem(`exam_session_${examId}`);
         
+        // Exit fullscreen on successful submit
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        } else if (document.webkitFullscreenElement) {
+          document.webkitExitFullscreen();
+        } else if (document.msFullscreenElement) {
+          document.msExitFullscreen();
+        }
+        
         navigate(`/exam/${examId}/result`);
       } else {
         setError(result.error || 'Failed to submit exam');
@@ -287,37 +387,64 @@ const ExamReview = () => {
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
-      {/* Navbar */}
-      <nav className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-6 py-4`}>
-        <div className="flex items-center justify-between">
-          <LogoLink />
+    <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* Navbar - RESPONSIVE */}
+      <nav className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-3 sm:px-6 py-3 sm:py-4`}>
+        <div className="flex items-center justify-between max-w-full">
+          <div className="flex-shrink-0">
+            <LogoLink />
+          </div>
           <button
             onClick={toggleDarkMode}
-            className={`p-2 rounded-lg ${darkMode ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'} transition-colors`}
+            className={`flex-shrink-0 p-2 rounded-lg ${darkMode ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'} transition-colors`}
           >
             {darkMode ? <FiSun className="w-5 h-5" /> : <FiMoon className="w-5 h-5" />}
           </button>
         </div>
       </nav>
 
-      {/* Exam Header Section */}
-      <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-6 py-6`}>
-        <div className="flex items-center justify-between">
-          <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{examData.title}</h1>
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <div className="w-6 h-6 bg-red-500 flex items-center justify-center" style={{clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'}}>
+      {/* Exam Header Section - RESPONSIVE */}
+      <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-3 sm:px-6 py-4 sm:py-6`}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h1 className={`text-lg sm:text-xl lg:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'} truncate`}>
+            {examData.title}
+          </h1>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:gap-4">
+            <div className="relative hidden sm:block">
+              <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-500 flex items-center justify-center" style={{clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'}}>
                 <span className="text-white text-sm font-bold">!</span>
               </div>
             </div>
             <div className="relative">
-              <MdOutlineVideocam className={`w-6 h-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
+              <MdOutlineVideocam className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
               <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
             </div>
-            <div className={`flex items-center space-x-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} px-6 py-3 rounded-lg ${timeLeft <= ((exam?.settings?.timeLimit || 60) * 60 * 0.1) ? 'ring-2 ring-red-500' : ''}`}>
-              <div className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-lg`}>🕐</div>
-              <div className={`text-xl font-mono font-semibold ${getTimerColor()}`}>
+            
+            {/* ✅ Violations Counter */}
+            {totalViolations > 0 && (
+              <div className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md ${
+                totalViolations >= 5 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span className="text-xs font-semibold">{totalViolations} violation{totalViolations !== 1 ? 's' : ''}</span>
+              </div>
+            )}
+            
+            {/* ✅ Fullscreen Status Warning */}
+            {!isFullscreen && (
+              <div className="bg-orange-100 text-orange-700 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md flex items-center space-x-1 sm:space-x-2">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span className="text-xs font-semibold hidden sm:inline">Not fullscreen</span>
+              </div>
+            )}
+            
+            <div className={`flex items-center space-x-2 sm:space-x-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} px-3 sm:px-6 py-2 sm:py-3 rounded-lg ${timeLeft <= ((exam?.settings?.timeLimit || 60) * 60 * 0.1) ? 'ring-2 ring-red-500' : ''}`}>
+              <div className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-base sm:text-lg`}>🕐</div>
+              <div className={`text-base sm:text-xl font-mono font-semibold ${getTimerColor()}`}>
                 {formatTime(timeLeft)}
               </div>
             </div>
@@ -325,152 +452,203 @@ const ExamReview = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
+      {/* Top Bar with Back Button - RESPONSIVE */}
+      <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b mt-16`}>
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-5 flex items-center justify-between">
+          {/* Back Button */}
+          <button
+            onClick={() => navigate(`/exam/${examId}/taking`)}
+            className={`flex items-center space-x-2 ${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="text-xs sm:text-sm font-medium hidden sm:inline">Back to Questions</span>
+            <span className="text-xs sm:text-sm font-medium sm:hidden">Back</span>
+          </button>
+          
+          {/* Exam Title - Hidden on mobile */}
+          <h1 className={`text-lg sm:text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} hidden md:block absolute left-1/2 transform -translate-x-1/2`}>
+            {exam.title || exam.name}
+          </h1>
+
+          {/* Timer */}
+          <div className="flex items-center space-x-2">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className={`text-xs sm:text-base font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              {formatTime(timeLeft)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content - RESPONSIVE */}
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Time Warning Banner */}
         {timeLeft <= ((exam?.settings?.timeLimit || 60) * 60 * 0.1) && timeLeft > 0 && (
-          <div className="mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg flex items-center space-x-3 animate-pulse">
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+          <div className="mb-4 sm:mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-3 sm:p-4 rounded-lg flex items-start sm:items-center space-x-2 sm:space-x-3 animate-pulse">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 mt-0.5 sm:mt-0" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
             <div>
-              <p className="font-semibold">Time Running Out!</p>
-              <p className="text-sm">You have less than {Math.ceil(timeLeft / 60)} minute{Math.ceil(timeLeft / 60) === 1 ? '' : 's'} remaining. Please submit your exam now.</p>
+              <p className="font-semibold text-sm sm:text-base">Time Running Out!</p>
+              <p className="text-xs sm:text-sm">You have less than {Math.ceil(timeLeft / 60)} minute{Math.ceil(timeLeft / 60) === 1 ? '' : 's'} remaining. Please submit your exam now.</p>
             </div>
           </div>
         )}
 
-        {/* Header */}
-        <h2 className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-gray-800'} mb-2`}>Exam Summary</h2>
-        <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-6`}>Review your answers before submitting</p>
+        <h2 className={`text-lg sm:text-xl lg:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'} mb-1 sm:mb-2`}>
+          Exam Summary
+        </h2>
+        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} text-xs sm:text-sm lg:text-base mb-4 sm:mb-6 lg:mb-8`}>
+          Review your answers before submission
+        </p>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className={`${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'} p-4 rounded-xl border`}>
-            <div className="text-left">
-              <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{examData.totalQuestions}</div>
-              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Questions</div>
-            </div>
+        {/* Stats Grid - RESPONSIVE: 2 cols mobile, 4 cols desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6 lg:mb-8">
+          <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-3 sm:p-4 lg:p-6`}>
+            <span className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'} block mb-1 sm:mb-2`}>
+              Total Questions
+            </span>
+            <p className={`text-xl sm:text-2xl lg:text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              {examData.totalQuestions}
+            </p>
           </div>
-          <div className={`${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'} p-4 rounded-xl border`}>
-            <div className="text-left">
-              <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{examData.answered}</div>
-              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Answered</div>
-            </div>
+
+          <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-3 sm:p-4 lg:p-6`}>
+            <span className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'} block mb-1 sm:mb-2`}>
+              Answered
+            </span>
+            <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600">
+              {examData.answered}
+            </p>
           </div>
-          <div className={`${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'} p-4 rounded-xl border`}>
-            <div className="text-left">
-              <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{examData.flagged}</div>
-              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Flagged</div>
-            </div>
+
+          <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-3 sm:p-4 lg:p-6`}>
+            <span className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'} block mb-1 sm:mb-2`}>
+              Flagged
+            </span>
+            <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-yellow-600">
+              {examData.flagged}
+            </p>
           </div>
-          <div className={`${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'} p-4 rounded-xl border`}>
-            <div className="text-left">
-              <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{examData.unanswered}</div>
-              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Unanswered</div>
-            </div>
+
+          <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-3 sm:p-4 lg:p-6`}>
+            <span className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'} block mb-1 sm:mb-2`}>
+              Unanswered
+            </span>
+            <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600">
+              {examData.unanswered}
+            </p>
           </div>
         </div>
 
-        {/* Flagged Questions */}
+        {/* Unanswered Questions Section - RESPONSIVE */}
+        {examData.unansweredQuestions.length > 0 && (
+          <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6`}>
+            <div className="flex items-center space-x-2 mb-3 sm:mb-4">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Unanswered Questions ({examData.unansweredQuestions.length})
+              </h3>
+            </div>
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 sm:gap-3">
+              {examData.unansweredQuestions.map((question) => (
+                <button
+                  key={question.id}
+                  onClick={() => handleReviewQuestion(question.id)}
+                  className="h-8 sm:h-9 lg:h-10 rounded-md bg-red-100 text-red-700 hover:bg-red-200 font-medium text-xs sm:text-sm transition-colors"
+                >
+                  Q{question.id}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Flagged Questions Section - RESPONSIVE */}
         {examData.flaggedQuestions.length > 0 && (
-          <div className="mb-8 w-full max-w-[35%]">
-            <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-4`}>
+          <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6`}>
+            <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3 sm:mb-4`}>
               Flagged Questions ({examData.flaggedQuestions.length})
             </h3>
-            <div className="space-y-3">
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 sm:gap-3">
               {examData.flaggedQuestions.map((question) => (
-                <div key={question.id} className={`flex items-center justify-between py-3 px-4 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg`}>
-                  <div className="flex items-center space-x-4">
-                    <span className={`${darkMode ? 'text-white' : 'text-gray-800'} font-medium`}>Q{question.id}</span>
-                    <span className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{question.type}</span>
-                  </div>
-                  <button
-                    onClick={() => handleReviewQuestion(question.id)}
-                    className="bg-gray-200 hover:bg-gray-300 text-blue-600 text-sm px-4 py-2 rounded-lg"
-                  >
-                    Review
-                  </button>
-                </div>
+                <button
+                  key={question.id}
+                  onClick={() => handleReviewQuestion(question.id)}
+                  className="h-8 sm:h-9 lg:h-10 rounded-md bg-yellow-100 text-yellow-700 hover:bg-yellow-200 font-medium text-xs sm:text-sm transition-colors"
+                >
+                  Q{question.id}
+                </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Unanswered Questions */}
-        {examData.unansweredQuestions.length > 0 && (
-          <div className="mb-8 w-full max-w-[35%]">
-            <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-4`}>
-              Unanswered Questions ({examData.unansweredQuestions.length})
-            </h3>
-            <div className="space-y-3">
-              {examData.unansweredQuestions.map((question) => (
-                <div key={question.id} className={`flex items-center justify-between py-3 px-4 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg`}>
-                  <div className="flex items-center space-x-4">
-                    <span className={`${darkMode ? 'text-white' : 'text-gray-800'} font-medium`}>Q{question.id}</span>
-                    <span className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{question.type}</span>
-                  </div>
-                  <button
-                    onClick={() => handleReviewQuestion(question.id)}
-                    className="bg-gray-200 hover:bg-gray-300 text-blue-600 text-sm px-4 py-2 rounded-lg"
-                  >
-                    Review
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* All Questions Grid */}
-        <div className="mb-8">
-          <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-4`}>All Questions</h3>
-          <div className="grid grid-cols-6 md:grid-cols-12 gap-3">
-            {examData.allQuestions.map((question) => (
-              <button
-                key={question.id}
-                onClick={() => handleReviewQuestion(question.id)}
-                className={`w-12 h-12 rounded-lg border-2 font-medium text-sm ${
-                  question.status === 'answered' 
-                    ? 'bg-green-100 border-green-300 text-green-700'
-                    : question.status === 'flagged'
-                    ? 'bg-red-100 border-red-300 text-red-700'
-                    : 'bg-gray-100 border-gray-300 text-gray-700'
-                }`}
-              >
-                {question.id}
-              </button>
-            ))}
+        {/* All Questions Grid - RESPONSIVE */}
+        <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 lg:mb-8`}>
+          <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-3 sm:mb-4`}>
+            All Questions
+          </h3>
+          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 sm:gap-3">
+            {examData.allQuestions.map((question) => {
+              const isAnswered = question.status === 'answered';
+              const isFlagged = question.status === 'flagged';
+              
+              return (
+                <button
+                  key={question.id}
+                  onClick={() => handleReviewQuestion(question.id)}
+                  className={`h-9 sm:h-10 lg:h-12 rounded-md font-medium text-xs sm:text-sm transition-colors ${
+                    isAnswered
+                      ? darkMode ? 'bg-green-700 text-white hover:bg-green-600' : 'bg-green-100 text-green-800 hover:bg-green-200'
+                      : isFlagged
+                        ? darkMode ? 'bg-yellow-700 text-white hover:bg-yellow-600' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                        : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  } ${isFlagged ? 'ring-2 ring-yellow-500' : ''}`}
+                >
+                  {question.id}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Submit Section */}
-        <div className="flex justify-center">
-          <button
-            onClick={handleSubmitExam}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-24 rounded-lg text-lg"
-          >
-            Submit Exam
-          </button>
-        </div>
+        {/* Submit Button - RESPONSIVE */}
+        <button
+          onClick={handleSubmitExam}
+          className={`w-full py-2.5 sm:py-3 lg:py-4 rounded-lg font-semibold text-sm sm:text-base lg:text-lg transition-all ${
+            darkMode
+              ? 'bg-gray-800 hover:bg-gray-900 text-white'
+              : 'bg-gray-900 hover:bg-black text-white'
+          } shadow-lg hover:shadow-xl`}
+        >
+          Submit Exam
+        </button>
 
-        {/* Confirmation Dialog */}
+        {/* Confirmation Dialog - RESPONSIVE */}
         {showConfirmDialog && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg max-w-md mx-4`}>
-              <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'} mb-4`}>Confirm Submission</h3>
-              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} mb-6`}>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-4 sm:p-5 lg:p-6 rounded-lg max-w-md w-full mx-3 sm:mx-4`}>
+              <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'} mb-3 sm:mb-4`}>Confirm Submission</h3>
+              <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-xs sm:text-sm lg:text-base mb-4 sm:mb-5 lg:mb-6`}>
                 Are you sure you want to submit? You won't be able to change your answers.
               </p>
-              <div className="flex gap-3 justify-end">
+              <div className="flex gap-2 sm:gap-3 justify-end">
                 <button
                   onClick={() => setShowConfirmDialog(false)}
-                  className={`px-4 py-2 ${darkMode ? 'text-gray-300 border-gray-600 hover:bg-gray-700' : 'text-gray-600 border-gray-300 hover:bg-gray-50'} border rounded`}
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base ${darkMode ? 'text-gray-300 border-gray-600 hover:bg-gray-700' : 'text-gray-600 border-gray-300 hover:bg-gray-50'} border rounded`}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmSubmit}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base bg-green-600 text-white rounded hover:bg-green-700"
                 >
                   Confirm
                 </button>

@@ -13,12 +13,11 @@ import StudentDashboard from "./dashboards/studentdashboard/StudentDashboard.jsx
 import InstructorDashboard from "./dashboards/instructor-dashboards/Dashboard.jsx";
 import CreateExamPage from "./dashboards/instructor-dashboards/CreateExamPage.jsx";
 import AdminDashboard from "./dashboards/admindashboard/AdminDashboard.jsx";
-import ExamTaking from "./pages/ExamTaking.jsx";
 import ExamAccessPage from "./pages/ExamAccessPage.jsx";
 import ExamEnrollment from "./pages/ExamEnrollment.jsx";
 import ExamOverview from "./pages/exam/ExamOverview.jsx";
 import WebcamCheck from "./pages/exam/WebcamCheck.jsx";
-import ExamTakingNew from "./pages/exam/ExamTaking.jsx";
+import ExamTaking from "./pages/exam/ExamTaking.jsx";
 import ExamReview from "./pages/exam/ExamReview.jsx";
 import ExamResult from "./pages/exam/ExamResult.jsx";
 import StudentExams from "./pages/studentexams/StudentExams.jsx";
@@ -176,7 +175,7 @@ function App() {
             path="/exam/:examId/taking"
             element={
               <ProtectedRoute requiredRole="student">
-                <ExamTakingNew />
+                <ExamTaking />
               </ProtectedRoute>
             }
           />

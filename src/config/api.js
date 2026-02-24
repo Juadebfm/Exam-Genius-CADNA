@@ -19,20 +19,23 @@ export const API_ENDPOINTS = {
   ENROLLED_EXAMS: "/api/user/enrolled-exams",
   EXAM_BY_LINK: (examLink) => `/api/exams/link/${examLink}`,
   EXAM_DETAILS: (examId) => `/api/exams/${examId}`,
-  EXAM_WITH_ANSWERS: (examId) => `/api/exams/${examId}/with-answers`, // NEW ENDPOINT
+  EXAM_WITH_ANSWERS: (examId) => `/api/exams/${examId}/with-answers`,
 
   // Exam session endpoints
   EXAM_SESSION: (sessionId) => `/api/exam-sessions/${sessionId}`,
-  START_EXAM: (examId) => `/api/exam-sessions/start/${examId}`,
-  SUBMIT_ANSWER: (sessionId) => `/api/exam-sessions/${sessionId}/answer`,
+   START_EXAM: '/api/exam-sessions/start',
+  SUBMIT_ANSWER: (sessionId) => `/api/exam-sessions/${sessionId}/submit-answer`,
   SUBMIT_EXAM: (sessionId) => `/api/exam-sessions/${sessionId}/submit`,
-  AUTO_SUBMIT_EXAM: (sessionId) =>
-    `/api/exam-sessions/${sessionId}/auto-submit`,
+  AUTO_SUBMIT_EXAM: (sessionId) => `/api/exam-sessions/${sessionId}/auto-submit`,
   FLAG_ACTIVITY: (sessionId) => `/api/exam-sessions/${sessionId}/flag-activity`,
+  SYNC_ANSWERS: (sessionId) => `/api/exam-sessions/${sessionId}/sync`,
+  
+  // INTEGRITY MONITORING ENDPOINTS - THIS WAS MISSING!
+  LOG_INTEGRITY_EVENT: (sessionId) => `/api/exam-sessions/${sessionId}/integrity-event`,
+  GET_INTEGRITY_EVENTS: (sessionId) => `/api/exam-sessions/${sessionId}/integrity-events`,
 
   // Results endpoints
   RESULTS: "/api/results",
-  // Results by exam ID endpoint
   RESULT_BY_EXAM: (examId) => `/api/results/${examId}`,
 };
 
@@ -71,11 +74,10 @@ class ApiClient {
     const config = {
       mode: "cors",
       credentials: "same-origin",
-      // timeout will be handled manually with AbortController
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        "X-Requested-With": "XMLHttpRequest", // CSRF protection
+        "X-Requested-With": "XMLHttpRequest",
         ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
@@ -99,7 +101,6 @@ class ApiClient {
 
         if (!response.ok) {
           if (response.status === 401 && endpoint !== "/api/auth/refresh") {
-            // Clear invalid token and redirect to login
             localStorage.removeItem("authToken");
             localStorage.removeItem("refreshToken");
             window.location.href = "/signin";
@@ -110,7 +111,6 @@ class ApiClient {
           try {
             const errorData = await response.json();
             if (errorData.message && typeof errorData.message === "string") {
-              // Sanitize error message to prevent XSS
               errorMessage = errorData.message.replace(/[<>"'&]/g, "");
             }
           } catch (parseError) {
@@ -134,9 +134,8 @@ class ApiClient {
         );
 
         if (attempt === maxRetries) break;
-        if (error.name === "AbortError") break; // Don't retry timeouts
+        if (error.name === "AbortError") break;
 
-        // Wait before retry (exponential backoff)
         await new Promise((resolve) =>
           setTimeout(resolve, Math.pow(2, attempt) * 1000),
         );
