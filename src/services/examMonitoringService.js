@@ -1,30 +1,32 @@
 import { apiClient, API_ENDPOINTS } from '../config/api';
 
-/**
- * Service for logging exam integrity events to backend
+/*
+  Service for logging exam integrity events to backend
+  Uses API_ENDPOINTS + keeps offline fallback support
  */
 class ExamMonitoringService {
-  /**
+  /*
    * Log an integrity event to the backend
    * @param {string} sessionId - Exam session ID
    * @param {object} event - Event data from useExamMonitoring
    */
   async logIntegrityEvent(sessionId, event) {
     if (!sessionId) {
-      console.warn(' No session ID provided for integrity event');
+      console.warn('⚠️ No session ID provided for integrity event');
       return { success: false, error: 'No session ID' };
     }
 
     try {
+      //  Uses API_ENDPOINTS 
       const response = await apiClient.post(
-        `/api/exam-sessions/${sessionId}/integrity-event`,
+        API_ENDPOINTS.LOG_INTEGRITY_EVENT(sessionId),
         event
       );
 
-      console.log(' Integrity event logged to backend:', event.eventType);
+      console.log('✅ Integrity event logged to backend:', event.eventType);
       return response;
     } catch (error) {
-      console.error(' Failed to log integrity event:', error);
+      console.error('❌ Failed to log integrity event:', error);
       
       // Store in localStorage as fallback
       this.storeEventLocally(sessionId, event);
@@ -33,8 +35,8 @@ class ExamMonitoringService {
     }
   }
 
-  /**
-   * Store event locally if backend fails
+  /*
+    Store event locally if backend fails
    */
   storeEventLocally(sessionId, event) {
     try {
@@ -46,14 +48,14 @@ class ExamMonitoringService {
         storedAt: new Date().toISOString()
       });
       localStorage.setItem(key, JSON.stringify(existing));
-      console.log(' Stored integrity event locally');
+      console.log('💾 Stored integrity event locally');
     } catch (error) {
       console.error('Failed to store event locally:', error);
     }
   }
 
-  /**
-   * Sync locally stored events to backend
+  /*
+    Sync locally stored events to backend
    */
   async syncLocalEvents(sessionId) {
     try {
@@ -71,7 +73,7 @@ class ExamMonitoringService {
       // Clear local storage after sync
       if (synced === events.length) {
         localStorage.removeItem(key);
-        console.log(` Synced ${synced} local events to backend`);
+        console.log(`🔄 Synced ${synced} local events to backend`);
       }
 
       return { success: true, synced };
@@ -81,13 +83,14 @@ class ExamMonitoringService {
     }
   }
 
-  /**
-   * Get integrity events for a session
+  /*
+    Get integrity events for a session
    */
   async getIntegrityEvents(sessionId) {
     try {
+      //  Uses API_ENDPOINTS 
       const response = await apiClient.get(
-        `/api/exam-sessions/${sessionId}/integrity-events`
+        API_ENDPOINTS.GET_INTEGRITY_EVENTS(sessionId)
       );
       return response;
     } catch (error) {

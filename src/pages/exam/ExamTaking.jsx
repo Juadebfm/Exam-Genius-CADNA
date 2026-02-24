@@ -39,21 +39,23 @@ const ExamTaking = () => {
     examIdRef.current = examId;
   }, [examId]);
 
-  // Anti-cheating monitoring - FULL IMPLEMENTATION
+  // Anti-cheating monitoring
   const { isFullscreen, violations, totalViolations } = useExamMonitoring({
     sessionId,
     examId,
-    enabled: true, // Enable all monitoring (fullscreen, tab-switch, blur, copy, etc.)
+    enabled: true,
     onIntegrityEvent: async (event) => {
-      // Log EVERY integrity event to backend
-      if (sessionId) {
-        await examMonitoringService.logIntegrityEvent(sessionId, event);
-        console.log('🚨 Integrity violation logged:', event.eventType);
+      if (sessionIdRef.current) {
+        try {
+          await examMonitoringService.logIntegrityEvent(sessionIdRef.current, event);
+        } catch (error) {
+          // Silently fail - violations logged locally
+        }
       }
     }
   });
 
-  // Initialize exam (YOUR WORKING METHOD)
+  // Initialize exam
   useEffect(() => {
     const initializeExam = async () => {
       try {
@@ -87,11 +89,10 @@ const ExamTaking = () => {
             if (savedAnswers) setAnswers(JSON.parse(savedAnswers));
             if (savedFlagged) setFlagged(JSON.parse(savedFlagged));
             
-            // Check if there's a question parameter in URL
             const urlParams = new URLSearchParams(window.location.search);
             const questionParam = urlParams.get('question');
             if (questionParam) {
-              const questionIndex = parseInt(questionParam);
+              const questionIndex = parseInt(questionParam) - 1;
               if (!isNaN(questionIndex) && questionIndex >= 0) {
                 setCurrentQuestion(questionIndex);
               }
@@ -100,7 +101,6 @@ const ExamTaking = () => {
         }
       } catch (error) {
         setError('Error loading exam');
-        console.error('Exam initialization error:', error);
       } finally {
         setLoading(false);
       }
@@ -133,12 +133,7 @@ const ExamTaking = () => {
   }, []);
 
   const handleAutoSubmit = async () => {
-    console.log('⏰ TIME EXPIRED - Auto-submitting exam...');
-    
-    if (!sessionIdRef.current) {
-      console.error('❌ No session ID for auto-submit');
-      return;
-    }
+    if (!sessionIdRef.current) return;
     
     try {
       const result = await examService.submitExam(sessionIdRef.current, answersRef.current, true);
@@ -153,7 +148,7 @@ const ExamTaking = () => {
         navigate(`/exam/${examIdValue}/result`);
       }
     } catch (error) {
-      console.error('❌ Auto-submit error:', error);
+      // Auto-submit failed
     }
   };
 
@@ -168,9 +163,8 @@ const ExamTaking = () => {
             timeSpent: 0
           }));
           await examService.syncAnswers(sessionId, answersArray);
-          console.log('✅ Auto-saved answers:', answersArray.length);
         } catch (error) {
-          console.warn('❌ Auto-save failed, will retry');
+          // Auto-save failed, will retry
         }
       }
     }, 30000);
@@ -198,28 +192,23 @@ const ExamTaking = () => {
   };
 
   const saveAnswer = async (questionId, answer) => {
-    // Save locally first (instant)
     const newAnswers = { ...answers, [questionId]: answer };
     setAnswers(newAnswers);
     localStorage.setItem(`exam_answers_${examId}`, JSON.stringify(newAnswers));
     
-    setSavingStatus('saving'); // Show "Saving..." indicator
-    console.log(`💾 Saving answer for question ${questionId}`);
+    setSavingStatus('saving');
     
     if (sessionId) {
       try {
         await examService.submitAnswer(sessionId, questionId, answer, 0);
-        console.log(`✅ Answer synced to server`);
-        setSavingStatus('saved'); // Show "Saved ✓"
-        setTimeout(() => setSavingStatus(''), 2000); // Clear after 2 seconds
+        setSavingStatus('saved');
+        setTimeout(() => setSavingStatus(''), 2000);
       } catch (error) {
-        console.warn(`❌ Answer sync failed, saved locally`);
-        setSavingStatus('error'); // Show "Error - saved locally"
+        setSavingStatus('error');
         setTimeout(() => setSavingStatus(''), 3000);
       }
     } else {
-      console.warn('⚠️ No session ID yet, answer saved locally only');
-      setSavingStatus('local'); // Show "Saved locally"
+      setSavingStatus('local');
       setTimeout(() => setSavingStatus(''), 2000);
     }
   };
@@ -250,17 +239,13 @@ const ExamTaking = () => {
   };
 
   const handleSubmitExam = async () => {
-    // Keep the confirmation - user requested this
     const confirmSubmit = window.confirm(
       'Are you sure you want to submit your exam? You cannot change your answers after submission.'
     );
     if (!confirmSubmit) return;
     
     try {
-      if (!sessionId) {
-        console.error('No session ID found');
-        return;
-      }
+      if (!sessionId) return;
       
       const result = await examService.submitExam(sessionId, answers, false);
       if (result.success) {
@@ -269,15 +254,14 @@ const ExamTaking = () => {
         localStorage.removeItem(`exam_flagged_${examId}`);
         localStorage.removeItem(`exam_session_${examId}`);
         
-        // Exit fullscreen on successful submit
         if (document.fullscreenElement) {
-          document.exitFullscreen().catch(err => console.log('Fullscreen exit:', err));
+          document.exitFullscreen().catch(() => {});
         }
         
         navigate(`/exam/${examId}/result`);
       }
     } catch (error) {
-      console.error('Exam submission error:', error);
+      // Submission failed
     }
   };
 
@@ -324,37 +308,32 @@ const ExamTaking = () => {
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <ExamHeader darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />
 
-      {/* FIGMA: Top Bar with Exam Title + Icons + Timer */}
+      {/* Top Bar with Exam Title + Icons + Timer */}
       <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b mt-16`}>
-        <div className="max-w-7xl mx-auto px-8 py-5 flex items-center justify-between">
-          {/* Left: Exam Title */}
-          <div className="flex items-center space-x-3">
-            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-5 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <h1 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h1 className={`text-base sm:text-lg lg:text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} truncate`}>
               {exam.title || exam.name}
             </h1>
           </div>
 
-          {/* Right: Icons + Timer + Save Status */}
-          <div className="flex items-center space-x-4">
-            {/* Warning Triangle */}
-            <div className="w-6 h-6 flex items-center justify-center" title="Monitored exam">
-              <svg className="w-6 h-6 text-gray-700" fill="currentColor" viewBox="0 0 20 20">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:gap-4 w-full sm:w-auto justify-end">
+            <div className="hidden sm:flex w-5 h-5 sm:w-6 sm:h-6 items-center justify-center" title="Monitored exam">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
             </div>
 
-            {/* Webcam Icon with Green Dot */}
             <div className="relative" title="Webcam monitoring active">
-              <MdOutlineVideocam className={`w-7 h-7 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
+              <MdOutlineVideocam className={`w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
               <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></div>
             </div>
 
-            {/* Violations Counter */}
             {totalViolations > 0 && (
-              <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-md ${
+              <div className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md ${
                 totalViolations >= 5 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
               }`}>
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -364,19 +343,17 @@ const ExamTaking = () => {
               </div>
             )}
 
-            {/* Fullscreen Status Warning */}
             {!isFullscreen && (
-              <div className="bg-orange-100 text-orange-700 px-3 py-1.5 rounded-md flex items-center space-x-2">
+              <div className="bg-orange-100 text-orange-700 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md flex items-center space-x-1 sm:space-x-2">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
-                <span className="text-xs font-semibold">Not fullscreen</span>
+                <span className="text-xs font-semibold hidden sm:inline">Not fullscreen</span>
               </div>
             )}
 
-            {/* Save Status Indicator */}
             {savingStatus && (
-              <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-md text-xs font-medium ${
+              <div className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs font-medium ${
                 savingStatus === 'saved' ? 'bg-green-100 text-green-700' :
                 savingStatus === 'saving' ? 'bg-blue-100 text-blue-700' :
                 savingStatus === 'error' ? 'bg-red-100 text-red-700' :
@@ -387,7 +364,7 @@ const ExamTaking = () => {
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span>Saved</span>
+                    <span className="hidden sm:inline">Saved</span>
                   </>
                 )}
                 {savingStatus === 'saving' && (
@@ -396,7 +373,7 @@ const ExamTaking = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span>Saving...</span>
+                    <span className="hidden sm:inline">Saving...</span>
                   </>
                 )}
                 {savingStatus === 'error' && (
@@ -404,7 +381,7 @@ const ExamTaking = () => {
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
-                    <span>Saved locally</span>
+                    <span className="hidden sm:inline">Saved locally</span>
                   </>
                 )}
                 {savingStatus === 'local' && (
@@ -412,18 +389,17 @@ const ExamTaking = () => {
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z" />
                     </svg>
-                    <span>Saved locally</span>
+                    <span className="hidden sm:inline">Saved locally</span>
                   </>
                 )}
               </div>
             )}
 
-            {/* Timer */}
-            <div className="flex items-center space-x-2">
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className={`text-base font-medium ${getTimerColor()}`}>
+              <span className={`text-sm sm:text-base font-medium ${getTimerColor()}`}>
                 {formatTime(timeLeft)}
               </span>
             </div>
@@ -431,15 +407,37 @@ const ExamTaking = () => {
         </div>
       </div>
 
-      {/* FIGMA: Main Layout with Sidebar + Content */}
+      {/* Mobile Question Navigation */}
+      <div className={`lg:hidden px-4 py-3 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} border-b flex items-center justify-between`}>
+        <button
+          onClick={handlePrevious}
+          disabled={currentQuestion === 0}
+          className="px-3 py-1.5 bg-gray-800 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+        >
+          ← Prev
+        </button>
+        
+        <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          Question {currentQuestion + 1} / {questions.length}
+        </span>
+        
+        <button
+          onClick={handleNext}
+          disabled={currentQuestion === questions.length - 1}
+          className="px-3 py-1.5 bg-gray-800 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+        >
+          Next →
+        </button>
+      </div>
+
+      {/* Main Layout */}
       <div className="max-w-7xl mx-auto flex">
-        {/* FIGMA: Left Sidebar - Question Navigation Grid */}
-        <div className={`w-80 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-r p-6`}>
+        {/* Left Sidebar - Desktop Only */}
+        <div className={`hidden lg:block w-80 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-r p-6`}>
           <h2 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-4 uppercase tracking-wide`}>
             Question Navigation
           </h2>
 
-          {/* Question Grid - 3 columns */}
           <div className="grid grid-cols-3 gap-3 mb-8">
             {questions.map((q, index) => {
               const qId = q.id || q._id;
@@ -464,7 +462,6 @@ const ExamTaking = () => {
             })}
           </div>
 
-          {/* FIGMA: Review & Submit Section */}
           <div className={`pt-6 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <h3 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-4`}>
               Review & Submit
@@ -496,15 +493,14 @@ const ExamTaking = () => {
           </div>
         </div>
 
-        {/* FIGMA: Main Content Area */}
-        <div className="flex-1 px-8 py-6">
-          {/* FIGMA: Question Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
-              <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+        {/* Main Content Area */}
+        <div className="flex-1 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <span className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Question {currentQuestion + 1} of {questions.length}
               </span>
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${
+              <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-semibold uppercase ${
                 darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
               }`}>
                 {currentQ.type === 'multiple-choice' ? 'MULTIPLE CHOICE' :
@@ -515,7 +511,6 @@ const ExamTaking = () => {
               </span>
             </div>
 
-            {/* Flag Question Checkbox */}
             <label className="flex items-center space-x-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -523,22 +518,19 @@ const ExamTaking = () => {
                 onChange={() => handleFlagToggle(currentQ.id || currentQ._id)}
                 className="w-4 h-4 rounded border-gray-300"
               />
-              <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              <span className={`text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Flag Question
               </span>
             </label>
           </div>
 
-          {/* FIGMA: Question Card */}
-          <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg shadow-sm p-8 mb-6`}>
-            {/* Question Text */}
-            <h2 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'} mb-8`}>
+          <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg shadow-sm p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6`}>
+            <h2 className={`text-base sm:text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'} mb-4 sm:mb-6 lg:mb-8`}>
               {currentQ.text || currentQ.question || currentQ.title || 'Question text not available'}
             </h2>
 
-            {/* FIGMA: Answer Options */}
             {(currentQ.type === 'multiple-choice' || currentQ.type === 'true-false') && (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {(currentQ.options || (currentQ.type === 'true-false' ? ['True', 'False'] : [])).map((option, index) => {
                   const optionText = typeof option === 'string' ? option : option.text;
                   const optionValue = typeof option === 'string' ? option : option.value || option.text;
@@ -548,7 +540,7 @@ const ExamTaking = () => {
                   return (
                     <label
                       key={index}
-                      className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                      className={`flex items-center space-x-2 sm:space-x-3 p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                         isSelected
                           ? 'border-blue-600 bg-blue-50'
                           : darkMode
@@ -562,9 +554,9 @@ const ExamTaking = () => {
                         value={optionValue}
                         checked={isSelected}
                         onChange={() => handleAnswerSelect(qId, optionValue)}
-                        className="w-5 h-5 text-blue-600"
+                        className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600"
                       />
-                      <span className={`text-base ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                      <span className={`text-sm sm:text-base ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>
                         {optionText}
                       </span>
                     </label>
@@ -573,12 +565,11 @@ const ExamTaking = () => {
               </div>
             )}
 
-            {/* Essay/Short Answer */}
             {(currentQ.type === 'essay' || currentQ.type === 'short-answer') && (
               <textarea
                 value={answers[currentQ.id || currentQ._id] || ''}
                 onChange={(e) => handleAnswerSelect(currentQ.id || currentQ._id, e.target.value)}
-                className={`w-full p-4 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${
+                className={`w-full p-3 sm:p-4 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'} rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm sm:text-base ${
                   currentQ.type === 'essay' ? 'h-48' : 'h-24'
                 }`}
                 placeholder="Type your answer here..."
@@ -586,12 +577,11 @@ const ExamTaking = () => {
             )}
           </div>
 
-          {/* FIGMA: Footer Navigation */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
             <button
               onClick={handlePrevious}
               disabled={currentQuestion === 0}
-              className={`px-6 py-2.5 rounded-md font-medium transition-colors ${
+              className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 rounded-md font-medium transition-colors ${
                 currentQuestion === 0
                   ? 'opacity-50 cursor-not-allowed bg-gray-200 text-gray-400'
                   : darkMode
@@ -602,7 +592,7 @@ const ExamTaking = () => {
               Previous
             </button>
 
-            <span className={`text-sm font-medium ${
+            <span className={`text-xs sm:text-sm font-medium ${
               isAnswered
                 ? darkMode ? 'text-green-400' : 'text-green-600'
                 : darkMode ? 'text-gray-400' : 'text-gray-500'
@@ -613,7 +603,7 @@ const ExamTaking = () => {
             <button
               onClick={handleNext}
               disabled={currentQuestion === questions.length - 1}
-              className={`px-6 py-2.5 rounded-md font-medium transition-colors ${
+              className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 rounded-md font-medium transition-colors ${
                 currentQuestion === questions.length - 1
                   ? 'opacity-50 cursor-not-allowed bg-gray-200 text-gray-400'
                   : 'bg-gray-800 hover:bg-gray-900 text-white'
@@ -623,6 +613,23 @@ const ExamTaking = () => {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Floating Review Button - Mobile Only */}
+      <div className="lg:hidden fixed bottom-6 right-6 z-50">
+        <button
+          onClick={() => navigate(`/exam/${examId}/summary`)}
+          className={`px-6 py-3 rounded-full font-semibold text-sm shadow-lg transition-all ${
+            darkMode
+              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          } hover:shadow-xl flex items-center space-x-2`}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+          <span>Review</span>
+        </button>
       </div>
     </div>
   );

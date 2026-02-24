@@ -1,116 +1,169 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { examMonitoringService } from '../services/examMonitoringService';
 
-/**
- * Custom hook for exam monitoring and anti-cheating features
- * Tracks: fullscreen, tab switches, window blur, visibility changes
+/*
+  Hook to monitor exam integrity and detect cheating attempts
  */
-export const useExamMonitoring = ({ 
-  sessionId, 
-  examId, 
-  onIntegrityEvent, 
-  enabled = true 
+export const useExamMonitoring = ({
+  sessionId,
+  examId,
+  enabled = true,
+  onIntegrityEvent
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [violations, setViolations] = useState({
     tabSwitches: 0,
     windowBlurs: 0,
     fullscreenExits: 0,
-    visibilityChanges: 0
+    copyAttempts: 0,
+    otherViolations: 0
   });
-  
-  const violationsRef = useRef(violations);
+  const [totalViolations, setTotalViolations] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
   const startTimeRef = useRef(Date.now());
+  const sessionIdRef = useRef(sessionId);
 
-  // Update ref when violations change
+  // Update sessionId ref when it changes
   useEffect(() => {
-    violationsRef.current = violations;
-  }, [violations]);
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
 
-  // Request fullscreen on component mount
+  //  FETCH EXISTING VIOLATIONS FROM BACKEND 
   useEffect(() => {
-    if (!enabled) return;
+    const fetchExistingViolations = async () => {
+      if (!sessionId) {
+        console.log('⚠️ No sessionId, skipping violation fetch');
+        setIsLoading(false);
+        return;
+      }
 
-    const enterFullscreen = async () => {
       try {
-        const elem = document.documentElement;
-        if (elem.requestFullscreen) {
-          await elem.requestFullscreen();
-        } else if (elem.webkitRequestFullscreen) { // Safari
-          await elem.webkitRequestFullscreen();
-        } else if (elem.msRequestFullscreen) { // IE11
-          await elem.msRequestFullscreen();
+        console.log('📥 Fetching existing violations for session:', sessionId);
+        
+        //  Use examMonitoringService instead of direct fetch
+        const result = await examMonitoringService.getIntegrityEvents(sessionId);
+        console.log('✅ Fetch result:', result);
+        
+        if (result && result.data) {
+          setViolations(result.data.violations || {
+            tabSwitches: 0,
+            windowBlurs: 0,
+            fullscreenExits: 0,
+            copyAttempts: 0,
+            otherViolations: 0
+          });
+          setTotalViolations(result.data.totalViolations || 0);
+          console.log('📊 Initial violation count:', result.data.totalViolations);
         }
-        setIsFullscreen(true);
-        console.log('✅ Entered fullscreen mode');
       } catch (error) {
-        console.warn('⚠️ Fullscreen request failed:', error);
-        logEvent('fullscreen_denied', { error: error.message });
+        console.error('❌ Failed to fetch existing violations:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    // Small delay to avoid immediate fullscreen request
-    const timeout = setTimeout(enterFullscreen, 500);
-    return () => clearTimeout(timeout);
-  }, [enabled]);
+    fetchExistingViolations();
+  }, [sessionId]);
 
-  // Log integrity event
-  const logEvent = (eventType, metadata = {}) => {
+  // Helper to log integrity events
+  const logEvent = async (eventType, severity = 'medium', metadata = {}) => {
+    if (!enabled || !sessionIdRef.current) {
+      console.log('⚠️ Cannot log - enabled:', enabled, 'sessionId:', !!sessionIdRef.current);
+      return;
+    }
+
     const event = {
-      sessionId,
+      sessionId: sessionIdRef.current,
       examId,
       eventType,
       timestamp: new Date().toISOString(),
       timeFromStart: Math.floor((Date.now() - startTimeRef.current) / 1000),
+      severity,
       metadata
     };
 
-    console.log('🚨 Integrity Event:', event);
+    console.log('🚨 Logging violation:', eventType);
+    console.log('📤 Event data:', event);
 
-    // Call parent handler
+    // Update local state immediately for UI
+    setViolations(prev => {
+      const updated = { ...prev };
+      switch (eventType) {
+        case 'tab_switch':
+          updated.tabSwitches = (updated.tabSwitches || 0) + 1;
+          break;
+        case 'window_blur':
+          updated.windowBlurs = (updated.windowBlurs || 0) + 1;
+          break;
+        case 'fullscreen_exit':
+        case 'fullscreen_denied':
+          updated.fullscreenExits = (updated.fullscreenExits || 0) + 1;
+          break;
+        case 'copy_attempt':
+        case 'paste_attempt':
+          updated.copyAttempts = (updated.copyAttempts || 0) + 1;
+          break;
+        default:
+          updated.otherViolations = (updated.otherViolations || 0) + 1;
+      }
+      return updated;
+    });
+
+    setTotalViolations(prev => prev + 1);
+
+    // Call the callback if provided
     if (onIntegrityEvent) {
-      onIntegrityEvent(event);
+      console.log('📤 Calling onIntegrityEvent callback...');
+      try {
+        await onIntegrityEvent(event);
+        console.log('✅ Callback completed successfully');
+      } catch (error) {
+        console.error('❌ Callback failed:', error);
+      }
+    } else {
+      console.warn('⚠️ No onIntegrityEvent callback provided!');
     }
   };
 
-  // Fullscreen change detection
+  // Monitor fullscreen changes
   useEffect(() => {
     if (!enabled) return;
 
-    const handleFullscreenChange = () => {
-      const isNowFullscreen = !!(
+    const checkFullscreen = () => {
+      const isFS = !!(
         document.fullscreenElement ||
         document.webkitFullscreenElement ||
         document.msFullscreenElement
       );
+      setIsFullscreen(isFS);
+      return isFS;
+    };
 
-      setIsFullscreen(isNowFullscreen);
-
-      if (!isNowFullscreen) {
-        // User exited fullscreen
-        setViolations(prev => ({
-          ...prev,
-          fullscreenExits: prev.fullscreenExits + 1
-        }));
-
-        logEvent('fullscreen_exit', {
-          exitCount: violationsRef.current.fullscreenExits + 1,
-          severity: 'high'
-        });
-
-        // Show warning
-        alert('⚠️ Warning: You exited fullscreen mode. Please return to fullscreen to continue the exam.');
-
-        // Try to re-enter fullscreen
-        setTimeout(() => {
-          const elem = document.documentElement;
-          if (elem.requestFullscreen) {
-            elem.requestFullscreen().catch(err => 
-              console.warn('Failed to re-enter fullscreen:', err)
-            );
-          }
-        }, 100);
+    const handleFullscreenChange = () => {
+      const isFS = checkFullscreen();
+      if (!isFS && enabled) {
+        logEvent('fullscreen_exit', 'high', { reason: 'user_action' });
       }
     };
+
+    checkFullscreen();
+
+    const enterFullscreen = () => {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(err => {
+          console.warn('⚠️ Fullscreen request failed:', err);
+          logEvent('fullscreen_denied', 'medium', { error: err.message });
+        });
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
+      }
+    };
+
+    setTimeout(enterFullscreen, 500);
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
@@ -123,147 +176,127 @@ export const useExamMonitoring = ({
     };
   }, [enabled]);
 
-  // Window blur detection (user clicked outside browser)
+  // Monitor tab/window visibility
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      console.log('⚠️ Tab monitoring disabled');
+      return;
+    }
 
-    const handleBlur = () => {
-      setViolations(prev => ({
-        ...prev,
-        windowBlurs: prev.windowBlurs + 1
-      }));
+    console.log('✅ Setting up tab/blur monitoring');
 
-      logEvent('window_blur', {
-        blurCount: violationsRef.current.windowBlurs + 1,
-        severity: 'medium'
-      });
-
-      console.warn('⚠️ Window lost focus - potential cheating');
-    };
-
-    window.addEventListener('blur', handleBlur);
-    return () => window.removeEventListener('blur', handleBlur);
-  }, [enabled]);
-
-  // Visibility change detection (tab switched)
-  useEffect(() => {
-    if (!enabled) return;
+    let lastVisibilityChange = Date.now();
 
     const handleVisibilityChange = () => {
+      const now = Date.now();
+      if (now - lastVisibilityChange < 1000) return;
+      lastVisibilityChange = now;
+
       if (document.hidden) {
-        setViolations(prev => ({
-          ...prev,
-          tabSwitches: prev.tabSwitches + 1,
-          visibilityChanges: prev.visibilityChanges + 1
-        }));
-
-        logEvent('tab_switch', {
-          tabSwitchCount: violationsRef.current.tabSwitches + 1,
-          severity: 'high'
-        });
-
-        console.warn('⚠️ Tab switched - HIGH SEVERITY VIOLATION');
-        
-        // Show warning when user returns
-        alert('⚠️ WARNING: Tab switching is not allowed during the exam. This incident has been logged.');
+        console.log('🚨 TAB SWITCH DETECTED!');
+        logEvent('tab_switch', 'high', { hidden: true });
       }
+    };
+
+    const handleBlur = () => {
+      const now = Date.now();
+      if (now - lastVisibilityChange < 1000) return;
+      lastVisibilityChange = now;
+
+      console.log('🚨 WINDOW BLUR DETECTED!');
+      logEvent('window_blur', 'medium', { focused: false });
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+    };
   }, [enabled]);
 
-  // Context menu prevention (right-click)
+  // Monitor copy/paste attempts
   useEffect(() => {
     if (!enabled) return;
 
-    const preventContextMenu = (e) => {
+    const handleCopy = (e) => {
+      console.log('🚨 COPY DETECTED!');
+      logEvent('copy_attempt', 'low', { type: 'copy' });
+    };
+
+    const handlePaste = (e) => {
+      console.log('🚨 PASTE DETECTED!');
+      logEvent('paste_attempt', 'low', { type: 'paste' });
+    };
+
+    const handleCut = (e) => {
+      console.log('🚨 CUT DETECTED!');
+      logEvent('copy_attempt', 'low', { type: 'cut' });
+    };
+
+    document.addEventListener('copy', handleCopy);
+    document.addEventListener('paste', handlePaste);
+    document.addEventListener('cut', handleCut);
+
+    return () => {
+      document.removeEventListener('copy', handleCopy);
+      document.removeEventListener('paste', handlePaste);
+      document.removeEventListener('cut', handleCut);
+    };
+  }, [enabled]);
+
+  // Prevent right-click context menu
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleContextMenu = (e) => {
       e.preventDefault();
-      logEvent('context_menu_attempt', { severity: 'low' });
+      console.log('⚠️ Right-click blocked');
+      logEvent('context_menu', 'low', { blocked: true });
       return false;
     };
 
-    document.addEventListener('contextmenu', preventContextMenu);
-    return () => document.removeEventListener('contextmenu', preventContextMenu);
-  }, [enabled]);
-
-  // Copy/paste prevention
-  useEffect(() => {
-    if (!enabled) return;
-
-    const preventCopy = (e) => {
-      // Allow copy in textarea/input for user answers
-      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
-        return;
-      }
-      e.preventDefault();
-      logEvent('copy_attempt', { severity: 'low' });
-    };
-
-    const preventPaste = (e) => {
-      // Allow paste in textarea/input
-      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
-        return;
-      }
-      e.preventDefault();
-      logEvent('paste_attempt', { severity: 'low' });
-    };
-
-    document.addEventListener('copy', preventCopy);
-    document.addEventListener('paste', preventPaste);
+    document.addEventListener('contextmenu', handleContextMenu);
 
     return () => {
-      document.removeEventListener('copy', preventCopy);
-      document.removeEventListener('paste', preventPaste);
+      document.removeEventListener('contextmenu', handleContextMenu);
     };
   }, [enabled]);
 
-  // Print screen detection
+  // Detect common cheating key combinations
   useEffect(() => {
     if (!enabled) return;
 
     const handleKeyDown = (e) => {
-      // Print Screen (PrtScn)
-      if (e.key === 'PrintScreen') {
-        logEvent('print_screen_attempt', { severity: 'medium' });
-        alert('⚠️ Screenshots are not allowed during the exam.');
+      if (e.altKey && e.key === 'Tab') {
+        console.log('⚠️ Alt+Tab detected');
+        logEvent('tab_switch', 'high', { keys: 'Alt+Tab' });
       }
 
-      // Ctrl+P (Print)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
-        e.preventDefault();
-        logEvent('print_attempt', { severity: 'medium' });
-        alert('⚠️ Printing is not allowed during the exam.');
+      if (e.ctrlKey && e.shiftKey && e.key === 'I') {
+        console.log('⚠️ DevTools attempt detected');
+        logEvent('devtools_attempt', 'high', { keys: 'Ctrl+Shift+I' });
       }
 
-      // Ctrl+Shift+I or F12 (DevTools)
-      if (
-        (e.ctrlKey && e.shiftKey && e.key === 'I') ||
-        e.key === 'F12'
-      ) {
-        e.preventDefault();
-        logEvent('devtools_attempt', { severity: 'high' });
+      if (e.key === 'F12') {
+        console.log('⚠️ F12 DevTools attempt detected');
+        logEvent('devtools_attempt', 'high', { keys: 'F12' });
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [enabled]);
 
-  // Exit fullscreen on cleanup
-  useEffect(() => {
     return () => {
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(err => 
-          console.warn('Failed to exit fullscreen on cleanup:', err)
-        );
-      }
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [enabled]);
 
   return {
     isFullscreen,
     violations,
-    totalViolations: Object.values(violations).reduce((a, b) => a + b, 0)
+    totalViolations,
+    isLoading,
+    logEvent
   };
 };

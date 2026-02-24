@@ -39,7 +39,7 @@ export const examService = {
         throw new Error('Authentication required');
       }
       
-      const response = await apiClient.post(API_ENDPOINTS.START_EXAM(examId));
+      const response = await apiClient.post(API_ENDPOINTS.START_EXAM, { examId });
       
       console.log('Full start exam response:', response);
       console.log('Response keys:', Object.keys(response));
