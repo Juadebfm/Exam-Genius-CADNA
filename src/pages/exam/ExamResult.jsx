@@ -218,6 +218,7 @@ const ExamResult = () => {
             .join(" ");
         }
       }
+      
 
       return {
         number: index + 1,
