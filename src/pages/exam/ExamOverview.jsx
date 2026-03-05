@@ -5,18 +5,19 @@ import { useTheme } from '../../context/ThemeContext.jsx';
 import { AuthContext } from '../../context/AuthContextDefinition.js';
 import ExamHeader from '../../components/Layout/ExamHeader.jsx';
 import { examService } from '../../services/examService.js';
+import { apiClient, API_ENDPOINTS } from '../../config/api';  // ✅ ADD THIS
 
 const ExamOverview = () => {
   const navigate = useNavigate();
   const { examId } = useParams();
   const [examData, setExamData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);  // ✅ ADD THIS
   const { darkMode, toggleDarkMode } = useTheme();
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
     const fetchExamData = async () => {
-      // Check if user is authenticated
       if (!user) {
         navigate('/signin');
         return;
@@ -41,9 +42,42 @@ const ExamOverview = () => {
     }
   }, [examId, user, navigate]);
 
-  const handleBeginExam = () => {
-    navigate(`/exam/${examId}/webcam-check`);
-  };
+//  UPDATED: Create exam session before proceeding
+const handleBeginExam = async () => {
+  try {
+    setStarting(true);
+    
+    // Create exam session
+    console.log('Creating exam session for:', examId);
+    const response = await apiClient.post(API_ENDPOINTS.START_EXAM, {  
+      examId: examId
+    });
+    
+    console.log('Session created:', response);
+    
+    if (response.success || response.data) {
+      // Session created successfully
+      const sessionData = response.data || response;
+      
+      // Store session ID in localStorage (optional, for recovery)
+      localStorage.setItem('currentExamSession', JSON.stringify({
+        sessionId: sessionData._id || sessionData.id,
+        examId: examId,
+        startTime: new Date().toISOString()
+      }));
+      
+      // Navigate to webcam check
+      navigate(`/exam/${examId}/webcam-check`);
+    } else {
+      alert('Failed to start exam. Please try again.');
+    }
+  } catch (error) {
+    console.error('Error starting exam:', error);
+    alert(`Failed to start exam: ${error.response?.data?.message || error.message}`);
+  } finally {
+    setStarting(false);
+  }
+};
 
   if (loading) {
     return (
@@ -57,7 +91,6 @@ const ExamOverview = () => {
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <ExamHeader darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />
 
-      {/* Back Button */}
       <div className="px-6 py-4 pt-24">
         <button
           onClick={() => navigate('/student/exams')}
@@ -78,16 +111,22 @@ const ExamOverview = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
               <div className={`${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border p-6 rounded-lg text-center`}>
                 <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>Duration</div>
-                <div className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{examData?.settings?.timeLimit || examData?.duration || examData?.timeLimit } minutes </div>
+                <div className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {examData?.settings?.timeLimit || examData?.duration || examData?.timeLimit} minutes
+                </div>
               </div>
               <div className={`${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border p-6 rounded-lg text-center`}>
                 <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>Questions</div>
-                <div className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{examData?.questionCount || examData?.questions?.length || 0}</div>
+                <div className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {examData?.questionCount || examData?.questions?.length || 0}
+                </div>
               </div>
             </div>
 
             <div className="mb-8">
-              <h2 className={`text-xl font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'} mb-4 text-center`}>Exam Instructions</h2>
+              <h2 className={`text-xl font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'} mb-4 text-center`}>
+                Exam Instructions
+              </h2>
               <ul className={`list-disc pl-6 space-y-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 {(examData?.instructions || [
                   'Ensure stable internet connection throughout the exam.',
@@ -102,9 +141,10 @@ const ExamOverview = () => {
 
             <button
               onClick={handleBeginExam}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+              disabled={starting}  // ✅ ADD THIS
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              Proceed
+              {starting ? 'Starting Exam...' : 'Proceed'}  {/* ✅ ADD THIS */}
             </button>
           </div>
         </div>
