@@ -12,7 +12,8 @@ const ActiveExams = ({ user, exams }) => {
     const resultData = localStorage.getItem(`exam_result_${examId}`);
     if (resultData) return;
 
-    navigate(`/exam/${examId}/overview`);
+    // ✅ FIXED: Navigate to correct route
+    navigate(`/exam/${examId}`);  // Changed from /overview
   };
 
   return (
@@ -33,7 +34,7 @@ const ActiveExams = ({ user, exams }) => {
                 darkMode ? "border-gray-700" : "border-gray-200"
               }`}
             >
-              <div className="flex-1 pr-6 ">
+              <div className="flex-1 pr-6">
                 <h3
                   className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"} mb-2`}
                 >
