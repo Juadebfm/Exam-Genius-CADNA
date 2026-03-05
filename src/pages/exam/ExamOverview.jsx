@@ -42,42 +42,42 @@ const ExamOverview = () => {
     }
   }, [examId, user, navigate]);
 
-//  UPDATED: Create exam session before proceeding
-const handleBeginExam = async () => {
-  try {
-    setStarting(true);
-    
-    // Create exam session
-    console.log('Creating exam session for:', examId);
-    const response = await apiClient.post(API_ENDPOINTS.START_EXAM, {  
-      examId: examId
-    });
-    
-    console.log('Session created:', response);
-    
-    if (response.success || response.data) {
-      // Session created successfully
-      const sessionData = response.data || response;
+  // ✅ UPDATED: Create exam session before proceeding
+  const handleBeginExam = async () => {
+    try {
+      setStarting(true);
       
-      // Store session ID in localStorage (optional, for recovery)
-      localStorage.setItem('currentExamSession', JSON.stringify({
-        sessionId: sessionData._id || sessionData.id,
-        examId: examId,
-        startTime: new Date().toISOString()
-      }));
+      // Create exam session
+      console.log('Creating exam session for:', examId);
+      const response = await apiClient.post(API_ENDPOINTS.EXAM_SESSION_START, {
+        examId: examId
+      });
       
-      // Navigate to webcam check
-      navigate(`/exam/${examId}/webcam-check`);
-    } else {
-      alert('Failed to start exam. Please try again.');
+      console.log('Session created:', response);
+      
+      if (response.success || response.data) {
+        // Session created successfully
+        const sessionData = response.data || response;
+        
+        // Store session ID in localStorage (optional, for recovery)
+        localStorage.setItem('currentExamSession', JSON.stringify({
+          sessionId: sessionData._id || sessionData.id,
+          examId: examId,
+          startTime: new Date().toISOString()
+        }));
+        
+        // Navigate to webcam check
+        navigate(`/exam/${examId}/webcam-check`);
+      } else {
+        alert('Failed to start exam. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error starting exam:', error);
+      alert(`Failed to start exam: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setStarting(false);
     }
-  } catch (error) {
-    console.error('Error starting exam:', error);
-    alert(`Failed to start exam: ${error.response?.data?.message || error.message}`);
-  } finally {
-    setStarting(false);
-  }
-};
+  };
 
   if (loading) {
     return (
