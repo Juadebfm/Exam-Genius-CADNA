@@ -12,7 +12,7 @@ const ActiveExams = ({ user, exams }) => {
     const resultData = localStorage.getItem(`exam_result_${examId}`);
     if (resultData) return;
 
-    navigate(`/exam/${examId}/taking`);
+    navigate(`/exam/${examId}/overview`);
   };
 
   return (
