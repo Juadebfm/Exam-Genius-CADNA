@@ -1,53 +1,54 @@
+import { memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext.jsx";
+import { Card } from "../../components/shared";
 
-const ActiveExams = ({ user, exams }) => {
+// ✅ Wrapped with React.memo — prevents re-render when parent re-renders
+//    but exams list hasn't changed
+const ActiveExams = memo(({ user, exams }) => {
   const navigate = useNavigate();
   const { darkMode } = useTheme();
 
   const startExam = (exam) => {
     const examId = exam.id || exam._id || exam.examId;
-
-    // Check if exam has been completed
     const resultData = localStorage.getItem(`exam_result_${examId}`);
     if (resultData) return;
-
     navigate(`/exam/${examId}/overview`);
   };
 
   return (
-    <div
-      className={`${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"} border rounded-lg`}
-    >
+    // ✅ BEFORE: manual bg-gray-800/white div — AFTER: Card
+    <Card>
       <div>
         {exams.map((exam, index) => {
           const examId = exam.id || exam._id || exam.examId;
           const isCompleted = localStorage.getItem(`exam_result_${examId}`);
 
           return (
-            <div
+            // ✅ BEFORE: repeated manual dark/light border div — AFTER: Card
+            <Card
               key={examId || index}
-              className={`p-6 flex items-start justify-between ${
-                darkMode ? "hover:bg-gray-750" : "hover:bg-gray-50"
-              } transition-colors mb-5 last:mb-0 border rounded-lg ${
-                darkMode ? "border-gray-700" : "border-gray-200"
-              }`}
+              className="p-6 flex items-start justify-between mb-5 last:mb-0 hover:opacity-90 transition-opacity"
             >
-              <div className="flex-1 pr-6 ">
+              <div className="flex-1 pr-6">
                 <h3
-                  className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"} mb-2`}
+                  className={`text-lg font-semibold ${
+                    darkMode ? "text-white" : "text-gray-900"
+                  } mb-2`}
                 >
                   {exam.title || exam.name}
                 </h3>
                 <p
-                  className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mb-4 leading-relaxed max-w-[404px]`}
+                  className={`text-sm ${
+                    darkMode ? "text-gray-400" : "text-gray-600"
+                  } mb-4 leading-relaxed max-w-[404px]`}
                 >
                   {exam.description || exam.subject}
                 </p>
 
                 <button
                   onClick={() => startExam(exam)}
-                  disabled={isCompleted}
+                  disabled={!!isCompleted}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isCompleted
                       ? "bg-gray-400 text-gray-600 cursor-not-allowed"
@@ -59,12 +60,14 @@ const ActiveExams = ({ user, exams }) => {
                   {isCompleted ? "Completed" : "Start Exam"}
                 </button>
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>
-    </div>
+    </Card>
   );
-};
+});
+
+ActiveExams.displayName = "ActiveExams";
 
 export default ActiveExams;

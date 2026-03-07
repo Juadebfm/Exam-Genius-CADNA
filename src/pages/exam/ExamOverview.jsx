@@ -5,6 +5,15 @@ import { useTheme } from '../../context/ThemeContext.jsx';
 import { AuthContext } from '../../context/AuthContextDefinition.js';
 import ExamHeader from '../../components/Layout/ExamHeader.jsx';
 import { examService } from '../../services/examService.js';
+import { Card, LoadingSpinner } from '../../components/shared';
+
+// Default instructions shown when exam has none
+const DEFAULT_INSTRUCTIONS = [
+  'Ensure stable internet connection throughout the exam.',
+  'Do not refresh or switch browser tabs during the exam.',
+  'Complete the exam in one sitting; you cannot return later.',
+  'All questions must be answered before submission.',
+];
 
 const ExamOverview = () => {
   const navigate = useNavigate();
@@ -16,12 +25,11 @@ const ExamOverview = () => {
 
   useEffect(() => {
     const fetchExamData = async () => {
-      // Check if user is authenticated
       if (!user) {
         navigate('/signin');
         return;
       }
-      
+
       try {
         const result = await examService.getExamDetails(examId);
         if (result.success) {
@@ -36,22 +44,32 @@ const ExamOverview = () => {
       }
     };
 
-    if (examId) {
-      fetchExamData();
-    }
+    if (examId) fetchExamData();
   }, [examId, user, navigate]);
 
-  const handleBeginExam = () => {
-    navigate(`/exam/${examId}/webcam-check`);
-  };
+  const handleBeginExam = () => navigate(`/exam/${examId}/webcam-check`);
 
+  // ✅ BEFORE: manual dark/light loading div — AFTER: LoadingSpinner
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <LoadingSpinner />
       </div>
     );
   }
+
+  // ✅ Stat info card used twice — extracted to avoid repetition
+  const StatBox = ({ label, value }) => (
+    // ✅ BEFORE: manual bg-gray-700/gray-50 div — AFTER: Card
+    <Card className="p-6 text-center">
+      <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
+        {label}
+      </div>
+      <div className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+        {value}
+      </div>
+    </Card>
+  );
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -61,7 +79,9 @@ const ExamOverview = () => {
       <div className="px-6 py-4 pt-24">
         <button
           onClick={() => navigate('/student/exams')}
-          className={`flex items-center space-x-2 ${darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-800'} transition-colors`}
+          className={`flex items-center space-x-2 ${
+            darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-800'
+          } transition-colors`}
         >
           <FiArrowLeft className="w-5 h-5" />
           <span>Back to Exams</span>
@@ -70,33 +90,47 @@ const ExamOverview = () => {
 
       <div className="py-4 px-4">
         <div className="max-w-2xl mx-auto">
-          <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg shadow-md p-8`}>
-            <h1 className={`text-3xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} mb-6 text-center`}>
+          {/* ✅ BEFORE: manual bg-gray-800/white div — AFTER: Card */}
+          <Card className="shadow-md p-8">
+            <h1
+              className={`text-3xl font-semibold ${
+                darkMode ? 'text-white' : 'text-gray-900'
+              } mb-6 text-center`}
+            >
               {examData?.title || examData?.name || 'Exam'}
             </h1>
-            
+
+            {/* Duration + Questions stat boxes */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-              <div className={`${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border p-6 rounded-lg text-center`}>
-                <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>Duration</div>
-                <div className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{examData?.settings?.timeLimit || examData?.duration || examData?.timeLimit } minutes </div>
-              </div>
-              <div className={`${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border p-6 rounded-lg text-center`}>
-                <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>Questions</div>
-                <div className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{examData?.questionCount || examData?.questions?.length || 0}</div>
-              </div>
+              <StatBox
+                label="Duration"
+                value={`${examData?.settings?.timeLimit || examData?.duration || examData?.timeLimit} minutes`}
+              />
+              <StatBox
+                label="Questions"
+                value={examData?.questionCount || examData?.questions?.length || 0}
+              />
             </div>
 
+            {/* Instructions */}
             <div className="mb-8">
-              <h2 className={`text-xl font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'} mb-4 text-center`}>Exam Instructions</h2>
-              <ul className={`list-disc pl-6 space-y-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                {(examData?.instructions || [
-                  'Ensure stable internet connection throughout the exam.',
-                  'Do not refresh or switch browser tabs during the exam.',
-                  'Complete the exam in one sitting; you cannot return later.',
-                  'All questions must be answered before submission.'
-                ]).map((instruction, index) => (
-                  <li key={index}>{instruction}</li>
-                ))}
+              <h2
+                className={`text-xl font-semibold ${
+                  darkMode ? 'text-gray-200' : 'text-gray-800'
+                } mb-4 text-center`}
+              >
+                Exam Instructions
+              </h2>
+              <ul
+                className={`list-disc pl-6 space-y-3 ${
+                  darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}
+              >
+                {(examData?.instructions || DEFAULT_INSTRUCTIONS).map(
+                  (instruction, index) => (
+                    <li key={index}>{instruction}</li>
+                  ),
+                )}
               </ul>
             </div>
 
@@ -106,7 +140,7 @@ const ExamOverview = () => {
             >
               Proceed
             </button>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
