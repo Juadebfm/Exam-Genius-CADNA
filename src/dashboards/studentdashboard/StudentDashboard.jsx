@@ -1,44 +1,30 @@
-import { useState, useContext } from "react";
+import { useContext, memo } from "react";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { AuthContext } from "../../context/AuthContextDefinition.js";
-import Header from "../../components/Layout/Header";
-import Sidebar from "../../components/Layout/Sidebar";
+import { PageLayout } from "../../components/shared";
 import ActiveDashboard from "./ActiveDashboard.jsx";
 import EmptyDashboard from "./EmptyDashboard.jsx";
 
-const StudentDashboard = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+// ✅ Wrapped with React.memo — won't re-render unless user/darkMode changes
+const StudentDashboard = memo(() => {
   const { user } = useContext(AuthContext);
-  const { darkMode, toggleDarkMode } = useTheme();
+  const { darkMode } = useTheme();
 
-  // Determine if student has activity (enrolled in exams or has results)
-  
-  
   const hasActivity = true;
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <Header 
-        onMenuToggle={() => setSidebarOpen(!sidebarOpen)} 
-        title="Dashboard"
-        darkMode={darkMode}
-        onDarkModeToggle={toggleDarkMode}
-      />
-      <Sidebar 
-        isOpen={sidebarOpen} 
-        userRole="student" 
-        onClose={() => setSidebarOpen(false)} 
-      />
-      
-      <main className="lg:ml-64 pt-20">
-        {hasActivity ? (
-          <ActiveDashboard />
-        ) : (
-          <EmptyDashboard user={user} />
-        )}
-      </main>
-    </div>
+    // ✅ BEFORE: manual sidebarOpen state + Header + Sidebar + min-h-screen div (15 lines)
+    // ✅ AFTER: PageLayout handles all of it — sidebarOpen state lives inside PageLayout
+    <PageLayout title="Dashboard" mainClass="">
+      {hasActivity ? (
+        <ActiveDashboard />
+      ) : (
+        <EmptyDashboard user={user} />
+      )}
+    </PageLayout>
   );
-};
+});
+
+StudentDashboard.displayName = "StudentDashboard";
 
 export default StudentDashboard;
