@@ -12,7 +12,6 @@ export const examService = {
 
   async getExamDetails(examId) {
     try {
-      // Check if user is authenticated before making request
       const token = localStorage.getItem('authToken');
       if (!token) {
         throw new Error('Authentication required');
@@ -22,7 +21,6 @@ export const examService = {
       return { success: true, data: response.data || response };
     } catch (error) {
       if (error.message.includes('401') || error.message.includes('Authentication')) {
-        // Clear invalid tokens and redirect to login
         localStorage.removeItem('authToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('userData');
@@ -39,12 +37,11 @@ export const examService = {
         throw new Error('Authentication required');
       }
       
-      const response = await apiClient.post(API_ENDPOINTS.START_EXAM, { examId });
+      const response = await apiClient.post(API_ENDPOINTS.START_EXAM(examId), { timezone: 'Africa/Lagos' });
       
       console.log('Full start exam response:', response);
       console.log('Response keys:', Object.keys(response));
       
-      // Extract sessionId from response.data._id
       const sessionId = response.data?._id || response._id || response.sessionId;
       
       if (sessionId) {
@@ -91,7 +88,7 @@ export const examService = {
 
   async syncAnswers(sessionId, answers) {
     try {
-      const response = await apiClient.post(`/api/exam-sessions/${examId}/sync`, { answers });
+      const response = await apiClient.post(API_ENDPOINTS.SYNC_ANSWERS(sessionId), { answers });
       return { success: true, data: response };
     } catch (error) {
       return { success: false, error: error.message };
