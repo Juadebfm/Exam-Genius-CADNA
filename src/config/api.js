@@ -23,7 +23,7 @@ export const API_ENDPOINTS = {
 
   // Exam session endpoints
   EXAM_SESSION: (sessionId) => `/api/exam-sessions/${sessionId}`,
-   START_EXAM: '/api/exam-sessions/start',
+   START_EXAM: (examId) => `/api/exams/${examId}/start`,
   SUBMIT_ANSWER: (sessionId) => `/api/exam-sessions/${sessionId}/submit-answer`,
   SUBMIT_EXAM: (sessionId) => `/api/exam-sessions/${sessionId}/submit`,
   AUTO_SUBMIT_EXAM: (sessionId) => `/api/exam-sessions/${sessionId}/auto-submit`,
