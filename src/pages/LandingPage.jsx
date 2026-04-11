@@ -178,7 +178,11 @@ const LandingPage = () => {
               className="flex items-center space-x-2 cursor-pointer"
               onClick={() => navigate("/")}
             >
-              <img src="/logo.png" alt="Assess Acad" className="w-8 h-8" />
+              <img
+                src="/Logo icon.png"
+                alt="Assess Acad"
+                className="w-15 h-8"
+              />
             </div>
 
             {/* Navigation Links */}
@@ -293,6 +297,123 @@ const LandingPage = () => {
           <p className="text-sm md:text-base text-gray-600">
             Join users worldwide
           </p>
+        </div>
+      </section>
+
+
+
+
+
+
+
+
+
+      {/* Designed for Every Assessment Need */}
+      <section className="bg-white py-6 md:py-16">
+        <div>
+          <h2 className="mx-auto px-6 md:px-20 mt-6 text-center font-extrabold text-4xl">
+            Designed for Every Assessment Need
+          </h2>
+          <p className="mx-auto px-6 md:px-20 mt-4 text-center text-gray-600 w-full md:w-2/3 lg:w-1/2 text-sm">
+            From classrooms to boardrooms. AssessAcad powers secure, intelligent
+            assessments across industries worldwide.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mx-auto px-6 md:px-20 mt-10 divide-x divide-gray-110">
+            <div className="flex flex-col p-6 ">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                <img src="/Student.png" alt="Education" className="w-10 h-10" />
+              </div>
+              <h3 className="font-semibold text-gray-900 text-base mb-2">
+                Education
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Schools, colleges, and academic institutions delivering
+                comprehensive student assessments.
+              </p>
+            </div>
+
+            <div className="flex flex-col p-6 ">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                <img
+                  src="/User.png"
+                  alt="Recruitment"
+                  className="w-10 h-10"
+                />
+              </div>
+              <h3 className="font-semibold text-gray-900 text-base mb-2">
+                Recruitment & Hiring
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Pre-employment testing and skill assessments for talent
+                acquisition teams.
+              </p>
+            </div>
+
+            <div className="flex flex-col p-6 ">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                <img
+                  src="/Building.png"
+                  alt="Enterprise"
+                  className="w-10 h-10"
+                />
+              </div>
+              <h3 className="font-semibold text-gray-900 text-base mb-2">
+                Enterprise & Corporate Training
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Employee evaluations, compliance testing, and professional
+                development programs.
+              </p>
+            </div>
+          </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mx-auto px-6 md:px-20 mt-10 divide-x divide-gray-110">
+            <div className="flex flex-col p-6 ">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                <img src="/Award.png" alt="Education" className="w-10 h-10" />
+              </div>
+              <h3 className="font-semibold text-gray-900 text-base mb-2">
+                Education
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Schools, colleges, and academic institutions delivering
+                comprehensive student assessments.
+              </p>
+            </div>
+
+            <div className="flex flex-col p-6 ">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                <img
+                  src="/Pie Chat.png"
+                  alt="Recruitment"
+                  className="w-10 h-10"
+                />
+              </div>
+              <h3 className="font-semibold text-gray-900 text-base mb-2">
+                Recruitment & Hiring
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Pre-employment testing and skill assessments for talent
+                acquisition teams.
+              </p>
+            </div>
+
+            <div className="flex flex-col p-6 ">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                <img
+                  src="/Users.png"
+                  alt="Enterprise"
+                  className="w-10 h-10"
+                />
+              </div>
+              <h3 className="font-semibold text-gray-900 text-base mb-2">
+                Enterprise & Corporate Training
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Employee evaluations, compliance testing, and professional
+                development programs.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

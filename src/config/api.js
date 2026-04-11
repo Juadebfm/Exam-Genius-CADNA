@@ -13,6 +13,10 @@ export const API_ENDPOINTS = {
   ME: "/api/auth/me",
   PROFILE: "/api/user/profile",
   UPDATE_PROFILE: "/api/user/profile",
+  STUDY_RESOURCES: "/api/study-resources",
+  STUDY_SUGGESTIONS: "/api/study-resources/suggestions",
+  STUDY_AUTO_GENERATE: "/api/study-resources/auto-generate",
+  STUDY_GENERATE: "/api/study-resources/generate",
 
   // Exam endpoints
   EXAMS: "/api/exams",
@@ -23,16 +27,19 @@ export const API_ENDPOINTS = {
 
   // Exam session endpoints
   EXAM_SESSION: (sessionId) => `/api/exam-sessions/${sessionId}`,
-   START_EXAM: (examId) => `/api/exams/${examId}/start`,
+  START_EXAM: (examId) => `/api/exams/${examId}/start`,
   SUBMIT_ANSWER: (sessionId) => `/api/exam-sessions/${sessionId}/submit-answer`,
   SUBMIT_EXAM: (sessionId) => `/api/exam-sessions/${sessionId}/submit`,
-  AUTO_SUBMIT_EXAM: (sessionId) => `/api/exam-sessions/${sessionId}/auto-submit`,
+  AUTO_SUBMIT_EXAM: (sessionId) =>
+    `/api/exam-sessions/${sessionId}/auto-submit`,
   FLAG_ACTIVITY: (sessionId) => `/api/exam-sessions/${sessionId}/flag-activity`,
   SYNC_ANSWERS: (sessionId) => `/api/exam-sessions/${sessionId}/sync`,
-  
+
   // INTEGRITY MONITORING ENDPOINTS - THIS WAS MISSING!
-  LOG_INTEGRITY_EVENT: (sessionId) => `/api/exam-sessions/${sessionId}/integrity-event`,
-  GET_INTEGRITY_EVENTS: (sessionId) => `/api/exam-sessions/${sessionId}/integrity-events`,
+  LOG_INTEGRITY_EVENT: (sessionId) =>
+    `/api/exam-sessions/${sessionId}/integrity-event`,
+  GET_INTEGRITY_EVENTS: (sessionId) =>
+    `/api/exam-sessions/${sessionId}/integrity-events`,
 
   // Results endpoints
   RESULTS: "/api/results",

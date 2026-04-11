@@ -46,7 +46,7 @@ const StudentResults = () => {
     fetchResults();
   }, []);
 
-  // ✅ Wrapped with useMemo — only recalculates when results change
+  //  Wrapped with useMemo — only recalculates when results change
   const subjectPerformance = useMemo(() => {
     const subjects = {};
     results.forEach((result) => {
@@ -61,7 +61,7 @@ const StudentResults = () => {
     }));
   }, [results]);
 
-  // ✅ Wrapped with useMemo — only recalculates when results/filters change
+  //  Wrapped with useMemo — only recalculates when results/filters change
   const filteredResults = useMemo(() => {
     let filtered = [...results];
 
@@ -95,7 +95,7 @@ const StudentResults = () => {
 
   const recentResults = filteredResults.slice(0, 3);
 
-  // ✅ Wrapped with useMemo — only recalculates when subjectPerformance changes
+  //  Wrapped with useMemo — only recalculates when subjectPerformance changes
   const recommendations = useMemo(() => {
     const weakSubjects = subjectPerformance.filter((s) => s.percentage < 70);
     if (weakSubjects.length > 0) {
@@ -107,8 +107,8 @@ const StudentResults = () => {
 
   const handleViewDetails = (examId) => navigate(`/exam/${examId}/result`);
 
-  // ✅ BEFORE: full page rebuild with Header+Sidebar+spinner inside loading block
-  // ✅ AFTER: one line
+  //  BEFORE: full page rebuild with Header+Sidebar+spinner inside loading block
+  //  AFTER: one line
   if (loading) return <LoadingSpinner fullPage title="Results" />;
 
   const selectClass = `px-3 py-1.5 rounded-lg border text-sm ${
@@ -120,8 +120,8 @@ const StudentResults = () => {
   const labelClass = `text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`;
 
   return (
-    // ✅ BEFORE: 10 lines of page shell boilerplate
-    // ✅ AFTER: PageLayout handles all of it
+    //  BEFORE: 10 lines of page shell boilerplate
+    //  AFTER: PageLayout handles all of it
     <PageLayout title="Results">
       <div className="mb-6">
         <h1 className={`text-2xl font-bold ${darkMode ? "text-white" : "text-gray-900"} mb-2`}>
@@ -141,8 +141,8 @@ const StudentResults = () => {
       )}
 
       {results.length === 0 ? (
-        // ✅ BEFORE: 20 lines of manual empty-state div
-        // ✅ AFTER: EmptyState handles it
+        //  BEFORE: 20 lines of manual empty-state div
+        //  AFTER: EmptyState handles it
         <EmptyState
           icon="📊"
           title="No Results Yet"
@@ -159,7 +159,7 @@ const StudentResults = () => {
       ) : (
         <>
           {/* Filters */}
-          {/* ✅ BEFORE: manual dark/light div — AFTER: Card component */}
+          {/*  BEFORE: manual dark/light div — AFTER: Card component */}
           <Card className="p-4 mb-6">
             <div className="flex flex-wrap gap-4">
               <div className="flex items-center space-x-2">
@@ -195,7 +195,7 @@ const StudentResults = () => {
                 const date = new Date(result.submittedAt || result.completedAt || result.createdAt);
 
                 return (
-                  // ✅ BEFORE: manual dark/light div — AFTER: Card
+                  //  BEFORE: manual dark/light div — AFTER: Card
                   <Card key={result._id || index} className="p-6">
                     <div className="mb-2">
                       <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"} mb-1`}>
