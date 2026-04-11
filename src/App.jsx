@@ -5,17 +5,12 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import PublicRoute from "./components/PublicRoute.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
-// ✅ These 3 stay as normal imports — they are tiny utility components
-// that need to be available immediately, not lazy loaded
+
 import NotFound from "./pages/NotFound.jsx";
 
-// ─────────────────────────────────────────────
-// ✅ BEFORE: 20+ direct imports — entire app
-//    loaded upfront even if user only visits /signin
-//
-// ✅ AFTER: lazy() — each page only loads when
-//    the user actually navigates to that route
-// ─────────────────────────────────────────────
+
+
+
 
 // Auth & Landing
 const LandingPage         = lazy(() => import("./pages/LandingPage.jsx"));
@@ -35,6 +30,7 @@ const StudentDashboard    = lazy(() => import("./dashboards/studentdashboard/Stu
 const StudentExams        = lazy(() => import("./pages/studentexams/StudentExams.jsx"));
 const StudentResults      = lazy(() => import("./pages/studentresults/StudentResults.jsx"));
 const StudentSettings     = lazy(() => import("./pages/StudentSettings.jsx"));
+const StudyResources = lazy(() => import("./pages/studyresources/StudyResources.jsx"));
 
 // Exam flow
 const ExamOverview        = lazy(() => import("./pages/exam/ExamOverview.jsx"));
@@ -66,7 +62,7 @@ function App() {
   return (
     <ThemeProvider>
       <ErrorBoundary>
-        {/* ✅ Suspense shows PageLoader while any lazy page loads */}
+        {/*  Suspense shows PageLoader while any lazy page loads */}
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public */}
@@ -87,6 +83,7 @@ function App() {
             <Route path="/student/exams"   element={<ProtectedRoute requiredRole="student"><StudentExams /></ProtectedRoute>} />
             <Route path="/student/results" element={<ProtectedRoute requiredRole="student"><StudentResults /></ProtectedRoute>} />
             <Route path="/student/settings"element={<ProtectedRoute requiredRole="student"><StudentSettings /></ProtectedRoute>} />
+            <Route path="/student/resources" element={<ProtectedRoute requiredRole="student"><StudyResources /></ProtectedRoute>} />
 
             {/* Exam flow */}
             <Route path="/exam/:examId/overview"     element={<ProtectedRoute requiredRole="student"><ExamOverview /></ProtectedRoute>} />
