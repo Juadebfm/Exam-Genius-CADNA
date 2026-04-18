@@ -9,7 +9,6 @@ import {
   IoArrowBackOutline,
   IoHelpCircleOutline,
   IoTimeOutline,
-  IoBarChartOutline,
   IoFilterOutline,
   IoPlayOutline,
 } from "react-icons/io5";
@@ -59,11 +58,11 @@ const PracticeQuizzes = () => {
     return matchesSearch && matchesFilter;
   });
 
-  // Add this function inside the component
-const getUnsplashImage = (topic) => {
-  const key = import.meta.env.VITE_UNSPLASH_ACCESS_KEY;
-  return `https://api.unsplash.com/photos/random?query=${encodeURIComponent(topic)}&orientation=landscape&client_id=${key}`;
-};
+//   // Add this function inside the component
+// const getUnsplashImage = (topic) => {
+//   const key = import.meta.env.VITE_UNSPLASH_ACCESS_KEY;
+//   return `https://api.unsplash.com/photos/random?query=${encodeURIComponent(topic)}&orientation=landscape&client_id=${key}`;
+// };
 
 
 const [quizImages, setQuizImages] = useState({});
