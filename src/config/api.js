@@ -18,6 +18,7 @@ export const API_ENDPOINTS = {
   STUDY_AUTO_GENERATE: "/api/study-resources/auto-generate",
   STUDY_GENERATE: "/api/study-resources/generate",
 
+
   // Exam endpoints
   EXAMS: "/api/exams",
   ENROLLED_EXAMS: "/api/user/enrolled-exams",
@@ -70,6 +71,7 @@ class ApiClient {
       "/api/exam-sessions/",
       "/api/results",
       "/api/study-resources",
+       "/api/ai/",
     ];
     const isAllowed = allowedPaths.some((path) => endpoint.startsWith(path));
     if (!isAllowed) {
