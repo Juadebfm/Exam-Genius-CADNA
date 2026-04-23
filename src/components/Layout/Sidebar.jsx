@@ -13,10 +13,15 @@ import {
 import { useContext } from "react";
 import { AuthContext } from "../../context/AuthContextDefinition.js";
 
-const Sidebar = ({ isOpen, userRole = "student", onClose }) => {
+const Sidebar = ({ isOpen, userRole = "student", onClose, darkMode }) => {
   const { logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const dm = darkMode ?? (() => {
+    try { return JSON.parse(localStorage.getItem('userPrefs') || '{}').darkMode ?? false; }
+    catch { return false; }
+  })();
 
   const handleLogout = () => {
     logout();
@@ -41,10 +46,14 @@ const Sidebar = ({ isOpen, userRole = "student", onClose }) => {
 
   const links = userRole === "admin" ? adminLinks : studentLinks;
 
+  // Mobile open background: dark or light
+  const mobileOpenBg   = dm ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200";
+  const mobileTextBase = dm ? "text-gray-200" : "text-gray-700";
+  const mobileHover    = dm ? "hover:bg-gray-700 hover:text-white" : "hover:bg-gray-100 hover:text-gray-900";
+  const mobileActive   = dm ? "bg-gray-700 text-white" : "bg-blue-100 text-blue-600";
+
   return (
     <>
-
-      
       {/* Mobile overlay */}
       {isOpen && (
         <div 
@@ -60,33 +69,12 @@ const Sidebar = ({ isOpen, userRole = "student", onClose }) => {
           shadow-lg border-r
           transition-transform duration-300 ease-in-out
           w-64
-          ${
-            isOpen 
-              ? "translate-x-0 bg-white border-gray-200" 
-              : "-translate-x-full lg:translate-x-0 lg:bg-blue-500 lg:border-blue-600"
+          ${isOpen 
+            ? `translate-x-0 ${mobileOpenBg}` 
+            : "-translate-x-full lg:translate-x-0 lg:bg-blue-500 lg:border-blue-600"
           }
-        `}>
-        <div className="p-4 border-b hidden">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <img src="/Logo icon.png" alt="Exam Genius" className="h-6" />
-              <h3 className="font-Poppins font-bold text-[#302711]">Exam Genius</h3>
-            </div>
-            <button onClick={onClose} className="p-1 rounded-md hover:bg-gray-100">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-        {/* Logo */}
-        <div className="p-4 border-b border-blue-500 hidden">
-          <div className="flex items-center space-x-2">
-            <img src="/Logo icon.png" alt="Exam Genius" className="h-6" />
-            <h3 className="font-Poppins font-bold text-white">Exam Genius</h3>
-          </div>
-        </div>
-        
+        `}
+      >
         <nav className="space-y-2 flex-1 overflow-y-auto h-full flex flex-col pt-4">
           <div className="flex-1">
             {links.map(({ to, icon: Icon, label }) => {
@@ -98,8 +86,12 @@ const Sidebar = ({ isOpen, userRole = "student", onClose }) => {
                   onClick={() => window.innerWidth < 1024 && onClose && onClose()}
                   className={`flex items-center space-x-3 px-6 py-3 transition-colors ${
                     isActive
-                      ? "bg-black bg-opacity-30 text-white lg:bg-black lg:bg-opacity-30 lg:text-white" + (isOpen ? " !bg-blue-100 !text-blue-600" : "")
-                      : "text-white text-opacity-80 hover:bg-black hover:bg-opacity-20 hover:text-white lg:text-white lg:text-opacity-80 lg:hover:bg-black lg:hover:bg-opacity-20 lg:hover:text-white" + (isOpen ? " !text-gray-700 !hover:bg-gray-100 !hover:text-gray-900" : "")
+                      ? isOpen
+                        ? mobileActive
+                        : "bg-black bg-opacity-30 text-white"
+                      : isOpen
+                        ? `${mobileTextBase} ${mobileHover}`
+                        : "text-white text-opacity-80 hover:bg-black hover:bg-opacity-20 hover:text-white"
                   }`}
                 >
                   <Icon size={20} />
@@ -114,7 +106,7 @@ const Sidebar = ({ isOpen, userRole = "student", onClose }) => {
             onClick={handleLogout}
             className={`flex items-center space-x-3 px-6 py-3 transition-colors mt-auto ${
               isOpen 
-                ? "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                ? `${mobileTextBase} ${mobileHover}`
                 : "text-white text-opacity-80 hover:bg-black hover:bg-opacity-20 hover:text-white"
             }`}
           >
