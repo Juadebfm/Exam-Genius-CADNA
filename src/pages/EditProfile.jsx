@@ -119,11 +119,16 @@ const EditProfile = () => {
         minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: dm ? '#111827' : '#fff', fontFamily: 'system-ui, -apple-system, sans-serif',
       }}>
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '20px' }}>
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          <p style={{ fontSize: '18px', fontWeight: '600', color: dm ? '#F9FAFB' : '#111827' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          <div style={{
+            width: '80px', height: '80px', borderRadius: '50%',
+            background: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+          <p style={{ fontSize: '18px', fontWeight: '600', color: dm ? '#F9FAFB' : '#111827', margin: 0 }}>
             Profile updated successfully
           </p>
         </div>
