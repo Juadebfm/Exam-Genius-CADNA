@@ -190,7 +190,7 @@ const PastQuestions = () => {
                 <p className={`text-base font-semibold ${text} mb-1`}>
                   {q.topic}
                 </p>
-                <p className={`text-xs ${subText} mb-4`}>{q.subject}</p>
+                {/* <p className={`text-xs ${subText} mb-4`}>{q.subject}</p> */}
 
                 {/* Meta */}
                 <div className={`flex flex-col gap-2 text-xs ${subText} mb-5`}>
