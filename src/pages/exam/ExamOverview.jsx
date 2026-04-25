@@ -49,7 +49,7 @@ const ExamOverview = () => {
 
   const handleBeginExam = () => navigate(`/exam/${examId}/webcam-check`);
 
-  // ✅ BEFORE: manual dark/light loading div — AFTER: LoadingSpinner
+  
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -58,9 +58,9 @@ const ExamOverview = () => {
     );
   }
 
-  // ✅ Stat info card used twice — extracted to avoid repetition
+  
   const StatBox = ({ label, value }) => (
-    // ✅ BEFORE: manual bg-gray-700/gray-50 div — AFTER: Card
+    
     <Card className="p-6 text-center">
       <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
         {label}
@@ -90,7 +90,7 @@ const ExamOverview = () => {
 
       <div className="py-4 px-4">
         <div className="max-w-2xl mx-auto">
-          {/* ✅ BEFORE: manual bg-gray-800/white div — AFTER: Card */}
+         
           <Card className="shadow-md p-8">
             <h1
               className={`text-3xl font-semibold ${

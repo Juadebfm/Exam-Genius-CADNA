@@ -126,7 +126,7 @@ const ExamReview = () => {
     if (examId) loadExamData();
   }, [examId]);
 
-  // ✅ useCallback — stable auto-submit
+  //  useCallback — stable auto-submit
   const handleAutoSubmit = useCallback(async () => {
     const sid = localStorage.getItem(`exam_session_${examIdRef.current}`);
     if (!sid) return;
@@ -156,7 +156,7 @@ const ExamReview = () => {
     return () => clearInterval(timer);
   }, []); // eslint-disable-line
 
-  // ✅ useMemo — timer color
+  //  useMemo — timer color
   const timerColor = useMemo(() => {
     const total = (exam?.settings?.timeLimit || exam?.timeLimit || 60) * 60;
     const pct   = (timeLeft / total) * 100;
@@ -165,7 +165,7 @@ const ExamReview = () => {
     return darkMode ? 'text-white' : 'text-gray-900';
   }, [timeLeft, exam, darkMode]);
 
-  // ✅ useCallback — stable submit handler
+  //  useCallback — stable submit handler
   const confirmSubmit = useCallback(async () => {
     try {
       setShowConfirmDialog(false);
@@ -208,7 +208,7 @@ const ExamReview = () => {
     }
   }, [examId, answers, navigate]);
 
-  // ✅ BEFORE: manual loading div — AFTER: LoadingSpinner
+  
   if (loading) {
     return (
       <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-white'} flex items-center justify-center`}>
@@ -272,7 +272,7 @@ const ExamReview = () => {
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       {/* Navbar */}
-      {/* ✅ BEFORE: manual dark/light nav div — AFTER: Card */}
+     
       <Card className="rounded-none border-x-0 border-t-0 px-3 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between max-w-full">
           <div className="flex-shrink-0"><LogoLink /></div>
@@ -284,7 +284,6 @@ const ExamReview = () => {
       </Card>
 
       {/* Exam Header */}
-      {/* ✅ BEFORE: manual dark/light div — AFTER: Card */}
       <Card className="rounded-none border-x-0 border-t-0 px-3 sm:px-6 py-4 sm:py-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h1 className={`text-lg sm:text-xl lg:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'} truncate`}>
@@ -295,7 +294,7 @@ const ExamReview = () => {
               <MdOutlineVideocam className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`} />
               <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
             </div>
-            {/* ✅ BEFORE: repeated violation/fullscreen badge markup — AFTER: shared components */}
+           
             {totalViolations > 0 && <ViolationBadge count={totalViolations} />}
             {!isFullscreen && <FullscreenWarning />}
             <div className={`flex items-center space-x-2 sm:space-x-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} px-3 sm:px-6 py-2 sm:py-3 rounded-lg ${isTimeLow ? 'ring-2 ring-red-500' : ''}`}>
@@ -307,7 +306,6 @@ const ExamReview = () => {
       </Card>
 
       {/* Back + Timer Bar */}
-      {/* ✅ BEFORE: manual dark/light div — AFTER: Card */}
       <Card className="rounded-none border-x-0 border-t-0 mt-16">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-5 flex items-center justify-between">
           <button onClick={() => navigate(`/exam/${examId}/taking`)}
@@ -354,7 +352,6 @@ const ExamReview = () => {
         </p>
 
         {/* Stats Grid */}
-        {/* ✅ BEFORE: 4 repeated manual stat divs — AFTER: mapped array with Card */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6 lg:mb-8">
           {[
             { label: 'Total Questions', value: examData.totalQuestions, color: darkMode ? 'text-white' : 'text-gray-900' },
@@ -444,7 +441,7 @@ const ExamReview = () => {
         {/* Confirm Dialog */}
         {showConfirmDialog && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            {/* ✅ BEFORE: manual dark/light modal div — AFTER: Card */}
+            
             <Card className="p-4 sm:p-5 lg:p-6 max-w-md w-full mx-3 sm:mx-4">
               <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-800'} mb-3 sm:mb-4`}>
                 Confirm Submission

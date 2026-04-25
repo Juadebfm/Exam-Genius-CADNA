@@ -72,6 +72,7 @@ class ApiClient {
       "/api/results",
       "/api/study-resources",
        "/api/ai/",
+       
     ];
     const isAllowed = allowedPaths.some((path) => endpoint.startsWith(path));
     if (!isAllowed) {

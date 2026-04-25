@@ -7,9 +7,10 @@ import { apiClient } from "../../config/api";
 import {
   IoSearchOutline,
   IoArrowBackOutline,
-  IoHelpCircleOutline,
-  IoTimeOutline,
+  IoDocumentTextOutline,
   IoFilterOutline,
+  IoTimeOutline,
+  IoHelpCircleOutline,
   IoPlayOutline,
 } from "react-icons/io5";
 
@@ -19,36 +20,36 @@ const DIFFICULTY_COLORS = {
   hard: "text-red-600 bg-red-50",
 };
 
-const PracticeQuizzes = () => {
+const PastQuestions = () => {
   const { darkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [quizzes, setQuizzes] = useState([]);
+  const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
 
-  const fetchQuizzes = useCallback(async () => {
+  const fetchQuestions = useCallback(async () => {
     try {
       setLoading(true);
       const res = await apiClient.get(
-        "/api/study-resources?type=practice-quiz",
+        "/api/study-resources?type=past-question"
       );
-      if (res.success) setQuizzes(res.data);
+      if (res.success) setQuestions(res.data);
     } catch {
-      setQuizzes([]);
+      setQuestions([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchQuizzes();
-  }, [fetchQuizzes]);
+    fetchQuestions();
+  }, [fetchQuestions]);
 
   const difficulties = ["all", "easy", "medium", "hard"];
 
-  const filteredQuizzes = quizzes.filter((q) => {
+  const filteredQuestions = questions.filter((q) => {
     const matchesSearch =
       !search ||
       q.topic?.toLowerCase().includes(search.toLowerCase()) ||
@@ -57,30 +58,6 @@ const PracticeQuizzes = () => {
       activeFilter === "all" || q.difficulty === activeFilter;
     return matchesSearch && matchesFilter;
   });
-
-
-
-
-const [quizImages, setQuizImages] = useState({});
-
-const fetchImage = useCallback(async (topic, id) => {
-  try {
-    const key = import.meta.env.VITE_UNSPLASH_ACCESS_KEY;
-    const res = await fetch(
-      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(topic)}&orientation=landscape&client_id=${key}`
-    );
-    const data = await res.json();
-    setQuizImages(prev => ({ ...prev, [id]: data.urls?.regular }));
-  } catch {
-    // silently fail
-  }
-}, []);
-
-useEffect(() => {
-  quizzes.forEach(quiz => fetchImage(quiz.topic || quiz.subject, quiz._id));
-}, [quizzes, fetchImage]);
-
-
 
   const bg = darkMode ? "bg-gray-900" : "bg-gray-50";
   const cardBg = darkMode
@@ -106,7 +83,7 @@ useEffect(() => {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <main className="lg:ml-64 lg:mt-16 pt-16 p-4 sm:p-6 lg:p-8">
+      <main className="lg:ml-64 pt-16 p-4 sm:p-6 lg:p-8">
         {/* Back button */}
         <button
           onClick={() => navigate("/student/resources")}
@@ -119,10 +96,10 @@ useEffect(() => {
         {/* Page Header */}
         <div className={`rounded-xl border p-6 mb-6 ${cardBg}`}>
           <h1 className={`text-xl font-semibold ${text} mb-1`}>
-            Practice Quizzes
+            Practice Questions
           </h1>
           <p className={`text-sm ${subText} mb-4`}>
-            Test your knowledge with mock exams
+            Track your progress from the first attempt to exam-ready perfection.
           </p>
 
           {/* Search */}
@@ -133,7 +110,7 @@ useEffect(() => {
             />
             <input
               type="text"
-              placeholder="Search for resources..."
+              placeholder="Search for past questions..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className={`w-full pl-10 pr-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${inputBg}`}
@@ -163,35 +140,36 @@ useEffect(() => {
           ))}
         </div>
 
-        {/* Quiz Grid */}
+        {/* Questions Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
                 className={`rounded-xl border overflow-hidden animate-pulse ${cardBg}`}
               >
-                <div className="h-48 bg-gray-200" />
-                <div className="p-4 space-y-2">
+                <div className="p-6 space-y-3">
                   <div className="h-4 w-40 bg-gray-200 rounded" />
-                  <div className="h-3 w-32 bg-gray-200 rounded" />
                   <div className="h-3 w-24 bg-gray-200 rounded" />
+                  <div className="h-3 w-32 bg-gray-200 rounded" />
+                  <div className="h-3 w-32 bg-gray-200 rounded" />
+                  <div className="h-8 w-full bg-gray-200 rounded" />
                 </div>
               </div>
             ))}
           </div>
-        ) : filteredQuizzes.length === 0 ? (
+        ) : filteredQuestions.length === 0 ? (
           <div className={`rounded-xl border p-12 text-center ${cardBg}`}>
-            <IoHelpCircleOutline
+            <IoDocumentTextOutline
               className={`mx-auto mb-3 ${subText}`}
               size={40}
             />
             <p className={`text-sm font-medium ${text} mb-1`}>
-              No quizzes found
+              No past questions found
             </p>
             <p className={`text-xs ${subText} mb-4`}>
               Go back to Study Resources and click Auto Generate to create
-              practice quizzes based on your weak areas.
+              past questions based on your weak areas.
             </p>
             <button
               onClick={() => navigate("/student/resources")}
@@ -202,64 +180,49 @@ useEffect(() => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {filteredQuizzes.map((quiz) => (
+            {filteredQuestions.map((q) => (
               <div
-                key={quiz._id}
-                className={`rounded-xl border overflow-hidden transition-all hover:shadow-md hover:border-blue-400 ${cardBg}`}
+                key={q._id}
+                className={`rounded-xl border p-6 transition-all hover:shadow-md hover:border-blue-400 ${cardBg}`}
               >
-                {/* Thumbnail */}
-                <div className="h-48 bg-gray-100 relative overflow-hidden">
-                  <img
-                    src={quizImages[quiz._id] || ""}
-                    alt={quiz.topic}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                    }}
-                  />
+                {/* Title */}
+                <p className={`text-xs ${subText} mb-0.5`}>{q.subject}</p>
+                <p className={`text-base font-semibold ${text} mb-1`}>
+                  {q.topic}
+                </p>
+                <p className={`text-xs ${subText} mb-4`}>{q.subject}</p>
+
+                {/* Meta */}
+                <div className={`flex flex-col gap-2 text-xs ${subText} mb-5`}>
+                  <span className="flex items-center gap-2">
+                    <IoTimeOutline size={13} />
+                    {q.content?.questions?.length
+                      ? `${Math.round(q.content.questions.length * 1.5)} mins`
+                      : "2 hours"}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <IoHelpCircleOutline size={13} />
+                    {q.content?.questions?.length || 0} questions
+                  </span>
                 </div>
 
-                {/* Content */}
-                <div className="p-4">
-                  <p className={`text-xs ${subText} mb-0.5`}>{quiz.subject}</p>
-                  <p className={`text-sm font-semibold ${text} mb-2`}>
-                    {quiz.topic}
-                  </p>
-
-                  <div
-                    className={`flex items-center gap-3 text-xs ${subText} mb-3`}
+                {/* Difficulty + Button */}
+                <div className="flex items-center justify-between">
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
+                      DIFFICULTY_COLORS[q.difficulty] ||
+                      "text-gray-600 bg-gray-100"
+                    }`}
                   >
-                    {quiz.content?.questions?.length > 0 && (
-                      <span className="flex items-center gap-1">
-                        <IoHelpCircleOutline size={12} />
-                        {quiz.content.questions.length} Questions
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <IoTimeOutline size={12} />
-                      {quiz.content?.questions?.length
-                        ? `${quiz.content.questions.length * 1.5} mins`
-                        : "N/A"}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
-                        DIFFICULTY_COLORS[quiz.difficulty] ||
-                        "text-gray-600 bg-gray-100"
-                      }`}
-                    >
-                      Difficulty: {quiz.difficulty}
-                    </span>
-                    <button
-                      onClick={() => navigate(`/student/resources/${quiz._id}`)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
-                    >
-                      <IoPlayOutline size={12} />
-                      Start Quiz
-                    </button>
-                  </div>
+                    {q.difficulty}
+                  </span>
+                  <button
+                    onClick={() => navigate(`/student/resources/${q._id}`)}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
+                  >
+                    <IoPlayOutline size={12} />
+                    Take Exam
+                  </button>
                 </div>
               </div>
             ))}
@@ -270,4 +233,4 @@ useEffect(() => {
   );
 };
 
-export default PracticeQuizzes;
+export default PastQuestions;

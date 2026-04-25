@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { Card } from "../../components/shared";
 
-// ✅ Wrapped with React.memo — prevents re-render when parent re-renders
-//    but exams list hasn't changed
+
 const ActiveExams = memo(({ user, exams }) => {
   const navigate = useNavigate();
   const { darkMode } = useTheme();
@@ -17,7 +16,7 @@ const ActiveExams = memo(({ user, exams }) => {
   };
 
   return (
-    // ✅ BEFORE: manual bg-gray-800/white div — AFTER: Card
+   
     <Card>
       <div>
         {exams.map((exam, index) => {
@@ -25,7 +24,7 @@ const ActiveExams = memo(({ user, exams }) => {
           const isCompleted = localStorage.getItem(`exam_result_${examId}`);
 
           return (
-            // ✅ BEFORE: repeated manual dark/light border div — AFTER: Card
+           
             <Card
               key={examId || index}
               className="p-6 flex items-start justify-between mb-5 last:mb-0 hover:opacity-90 transition-opacity"
