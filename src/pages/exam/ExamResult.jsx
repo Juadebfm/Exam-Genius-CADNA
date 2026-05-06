@@ -130,12 +130,10 @@ const ExamResult = () => {
   const stats = getStats();
   const questionBreakdown = getQuestionBreakdown();
 
-  // ✅ BEFORE: full page rebuild (Header+Sidebar+spinner) in loading block
-  // ✅ AFTER: one line
+ 
   if (loading) return <LoadingSpinner fullPage title="Exam Result" />;
 
-  // ✅ BEFORE: full page rebuild (Header+Sidebar) + manual empty-state div in error block
-  // ✅ AFTER: PageLayout + EmptyState
+ 
   if (error || !result) {
     return (
       <PageLayout title="Exam Result">
@@ -161,7 +159,7 @@ const ExamResult = () => {
   const borderClass = darkMode ? "border-b border-gray-700" : "border-b border-gray-200";
 
   return (
-    // ✅ BEFORE: 10 lines of page shell — AFTER: PageLayout
+    
     <PageLayout title="Exam Result">
       {/* Back Button */}
       <button
@@ -181,7 +179,7 @@ const ExamResult = () => {
         </p>
       </div>
 
-      {/* ✅ BEFORE: manual bg-gray-800/white div — AFTER: Card */}
+     
       <Card className="p-6">
         {/* Exam Overview */}
         <div className="mb-8">
@@ -242,7 +240,7 @@ const ExamResult = () => {
           {/* Mobile Cards */}
           <div className="md:hidden space-y-4">
             {questionBreakdown.map((q, index) => (
-              // ✅ BEFORE: manual dark/light div — AFTER: Card
+             
               <Card key={index} className="p-4">
                 <div className="flex justify-between items-start mb-3">
                   <div>

@@ -4,8 +4,7 @@ import { EmptyState } from "../../components/shared";
 const EmptyExams = ({ user, searchQuery }) => {
   const { darkMode } = useTheme();
 
-  // ✅ BEFORE: 50+ lines with manual Card div, SVG, heading, description, button
-  // ✅ AFTER: EmptyState handles all repeated structure
+ 
   return (
     <EmptyState
       customIcon={

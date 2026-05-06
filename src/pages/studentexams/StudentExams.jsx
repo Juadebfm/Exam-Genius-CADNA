@@ -67,13 +67,12 @@ const StudentExams = () => {
 
   const hasExams = Array.isArray(filteredExams) && filteredExams.length > 0;
 
-  // ✅ BEFORE: inline Loading component import + full-page div rebuild
-  // ✅ AFTER: one line
+  
+  
   if (loading) return <LoadingSpinner fullPage title="Exams" />;
 
   return (
-    // ✅ BEFORE: 10 lines of min-h-screen + Header + Sidebar + main boilerplate
-    // ✅ AFTER: PageLayout handles all of it
+   
     <PageLayout title="Exams">
       <div className="mb-6">
         <h1

@@ -36,6 +36,8 @@ const VideoLessons = lazy(() => import("./pages/studyresources/VideoLessons.jsx"
 const HelpCenter = lazy(() => import("./pages/HelpCenter.jsx"));
 const ContactSupport = lazy(() => import("./pages/ContactSupport.jsx"));
 const EditProfile = lazy(() => import("./pages/EditProfile.jsx"));
+const StudyGuides = lazy(() => import("./pages/studyresources/StudyGuides.jsx"));
+const PastQuestions = lazy(() => import("./pages/studyresources/PastQuestions.jsx"));
 
 // Exam flow
 const ExamOverview        = lazy(() => import("./pages/exam/ExamOverview.jsx"));
@@ -94,6 +96,8 @@ function App() {
             <Route path="/HelpCenter" element={<ProtectedRoute requiredRole="student"><HelpCenter /></ProtectedRoute>} />
             <Route path="/student/ContactSupport" element={<ProtectedRoute requiredRole="student"><ContactSupport /></ProtectedRoute>} />
             <Route path="/student/edit-profile" element={<ProtectedRoute requiredRole="student"><EditProfile /></ProtectedRoute>} />
+            <Route path="/student/resources/study-guides" element={<ProtectedRoute requiredRole="student"><StudyGuides /></ProtectedRoute>} />
+            <Route path="/student/resources/past-questions" element={<ProtectedRoute requiredRole="student"><PastQuestions /></ProtectedRoute>} />
 
             {/* Exam flow */}
             <Route path="/exam/:examId/overview"     element={<ProtectedRoute requiredRole="student"><ExamOverview /></ProtectedRoute>} />

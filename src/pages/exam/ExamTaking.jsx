@@ -116,7 +116,7 @@ const ExamTaking = () => {
     if (examId) initializeExam();
   }, [examId]);
 
-  // ✅ useCallback — stable reference for auto-submit
+  //  useCallback — stable reference for auto-submit
   const handleAutoSubmit = useCallback(async () => {
     if (!sessionIdRef.current) return;
     try {
@@ -157,7 +157,7 @@ const ExamTaking = () => {
     return () => clearInterval(interval);
   }, [sessionId, answers]);
 
-  // ✅ useMemo — timer color only recalculates when timeLeft/exam changes
+  //  useMemo — timer color only recalculates when timeLeft/exam changes
   const timerColor = useMemo(() => {
     const total = (exam?.settings?.timeLimit || exam?.timeLimit || 60) * 60;
     const pct = (timeLeft / total) * 100;
@@ -166,7 +166,7 @@ const ExamTaking = () => {
     return darkMode ? 'text-white' : 'text-gray-900';
   }, [timeLeft, exam, darkMode]);
 
-  // ✅ useCallback — stable reference
+  //  useCallback — stable reference
   const saveAnswer = useCallback(async (questionId, answer) => {
     const newAnswers = { ...answersRef.current, [questionId]: answer };
     setAnswers(newAnswers);
@@ -217,7 +217,7 @@ const ExamTaking = () => {
     } catch { /* submission failed */ }
   }, [sessionId, answers, examId, navigate]);
 
-  // ✅ BEFORE: manual dark/light loading div — AFTER: LoadingSpinner
+  
   if (loading) {
     return (
       <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-white'} flex items-center justify-center`}>
@@ -263,7 +263,7 @@ const ExamTaking = () => {
       <ExamHeader darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />
 
       {/* Top Bar */}
-      {/* ✅ BEFORE: manual dark/light div — AFTER: Card */}
+     
       <Card className="mt-16 rounded-none border-x-0 border-t-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-5 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto">
@@ -281,10 +281,10 @@ const ExamTaking = () => {
               <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></div>
             </div>
 
-            {/* ✅ BEFORE: repeated violation badge markup — AFTER: ViolationBadge component */}
+           
             {totalViolations > 0 && <ViolationBadge count={totalViolations} />}
 
-            {/* ✅ BEFORE: repeated fullscreen warning markup — AFTER: FullscreenWarning component */}
+            
             {!isFullscreen && <FullscreenWarning />}
 
             {savingStatus && (
@@ -322,7 +322,7 @@ const ExamTaking = () => {
       {/* Main Layout */}
       <div className="max-w-7xl mx-auto flex">
         {/* Left Sidebar — Desktop Only */}
-        {/* ✅ BEFORE: manual dark/light div — AFTER: Card */}
+       
         <Card className="hidden lg:block w-80 rounded-none border-t-0 border-b-0 border-l-0 p-6">
           <h2 className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-4 uppercase tracking-wide`}>
             Question Navigation
@@ -391,7 +391,7 @@ const ExamTaking = () => {
             </label>
           </div>
 
-          {/* ✅ BEFORE: manual dark/light div — AFTER: Card */}
+         
           <Card className="shadow-sm p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6">
             <h2 className={`text-base sm:text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'} mb-4 sm:mb-6 lg:mb-8`}>
               {currentQ.text || currentQ.question || currentQ.title || 'Question text not available'}
